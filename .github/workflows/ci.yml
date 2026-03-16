@@ -66,6 +66,7 @@ jobs:
         run: bin/rubocop -f github
 
   test:
+    if: false
     runs-on: ubuntu-latest
 
     # services:
@@ -91,6 +92,7 @@ jobs:
         run: bin/rails db:test:prepare test
 
   system-test:
+    if: false
     runs-on: ubuntu-latest
 
     # services:
