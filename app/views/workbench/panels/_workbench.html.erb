@@ -1,0 +1,112 @@
+<%# Analysis Workbench Panel %>
+<div data-controller="analyze" data-action="upload:complete->analyze#uploadComplete" class="space-y-6">
+  <%# Header %>
+  <div class="flex items-center justify-between">
+    <div>
+      <h2 class="text-2xl font-bold text-white">Analysis Workbench</h2>
+      <p class="text-gray-400 text-sm mt-1">Analyze clinical text with AI-powered contextual understanding</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <button data-action="click->analyze#loadDemo"
+              class="px-3 py-1.5 text-sm rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700 transition-colors">
+        Load Demo
+      </button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <%# Input Section %>
+    <div class="space-y-4">
+      <%# File Upload %>
+      <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+        <h3 class="text-sm font-semibold text-gray-300 mb-3">Document Upload</h3>
+        <div data-controller="upload"
+             data-upload-url-value="<%= api_upload_path %>"
+             class="border-2 border-dashed border-gray-700 rounded-lg p-6 text-center hover:border-blue-500/50 transition-colors cursor-pointer"
+             data-action="dragover->upload#dragover dragenter->upload#dragenter dragleave->upload#dragleave drop->upload#drop click->upload#click">
+          <input type="file" data-upload-target="input" class="hidden" accept=".pdf,.txt,.md,.csv,.xml,.json,.tsv,.hl7"
+                 data-action="change->upload#fileSelected">
+          <p class="text-gray-500 text-sm">
+            <span class="text-blue-400">Click to upload</span> or drag and drop
+          </p>
+          <p class="text-gray-600 text-xs mt-1">PDF, TXT, MD, CSV (max 10MB)</p>
+          <div data-upload-target="status" class="mt-2 text-xs hidden"></div>
+        </div>
+      </div>
+
+      <%# Clinical Text Input %>
+      <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-semibold text-gray-300">Clinical Text</h3>
+          <span data-analyze-target="charCount" class="text-xs text-gray-600">0 characters</span>
+        </div>
+        <textarea
+          data-analyze-target="input"
+          data-action="input->analyze#updateCharCount"
+          placeholder="Paste clinical notes, discharge summaries, lab reports, or other medical documentation here..."
+          class="w-full h-48 bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm text-gray-200 placeholder-gray-600 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"></textarea>
+      </div>
+
+      <%# Analysis Options %>
+      <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+        <h3 class="text-sm font-semibold text-gray-300 mb-3">Analysis Options</h3>
+        <div class="flex flex-wrap gap-2">
+          <label class="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-800 rounded-lg text-sm text-gray-300 cursor-pointer hover:bg-gray-750">
+            <input type="checkbox" data-analyze-target="ragToggle" class="rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500/50">
+            <span>Use RAG Context</span>
+          </label>
+          <label class="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-800 rounded-lg text-sm text-gray-300 cursor-pointer hover:bg-gray-750">
+            <input type="checkbox" data-analyze-target="pubmedToggle" class="rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500/50">
+            <span>PubMed Search</span>
+          </label>
+        </div>
+      </div>
+
+      <%# Submit Button %>
+      <button data-action="click->analyze#submit"
+              data-analyze-target="submitBtn"
+              class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2">
+        <span data-analyze-target="submitText">Analyze Clinical Text</span>
+        <svg data-analyze-target="spinner" class="hidden animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+      </button>
+    </div>
+
+    <%# Output Section %>
+    <div class="space-y-4">
+      <div class="bg-gray-900 rounded-xl border border-gray-800 p-4 min-h-[400px]">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-semibold text-gray-300">Analysis Result</h3>
+          <button data-action="click->analyze#copyResult"
+                  data-analyze-target="copyBtn"
+                  class="hidden text-xs text-gray-500 hover:text-gray-300 transition-colors">
+            Copy
+          </button>
+        </div>
+        <div data-analyze-target="output"
+             class="prose prose-invert prose-sm max-w-none text-gray-300 leading-relaxed">
+          <div class="flex items-center justify-center h-64 text-gray-600">
+            <p class="text-center">
+              Analysis results will appear here.<br>
+              <span class="text-xs">Paste clinical text and click Analyze to begin.</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <%# RAG Context Panel (shown when RAG is active) %>
+      <div data-analyze-target="ragPanel" class="hidden bg-gray-900 rounded-xl border border-gray-800 p-4">
+        <h3 class="text-sm font-semibold text-gray-300 mb-3">Retrieved Context</h3>
+        <div data-analyze-target="ragResults" class="space-y-2 text-sm text-gray-400"></div>
+      </div>
+
+      <%# PubMed Results (shown when PubMed is active) %>
+      <div data-analyze-target="pubmedPanel" class="hidden bg-gray-900 rounded-xl border border-gray-800 p-4">
+        <h3 class="text-sm font-semibold text-gray-300 mb-3">PubMed Evidence</h3>
+        <div data-analyze-target="pubmedResults" class="space-y-2 text-sm text-gray-400"></div>
+      </div>
+    </div>
+  </div>
+</div>

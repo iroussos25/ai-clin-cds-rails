@@ -1,14 +1,27 @@
 Rails.application.routes.draw do
-  # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
+  # Main workbench (single-page app with Turbo Frames)
+  root "workbench#index"
+  get "workbench", to: "workbench#index"
 
-  # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
-  # Can be used by load balancers and uptime monitors to verify that the app is live.
+  # API namespace for all backend endpoints
+  namespace :api do
+    post "analyze", to: "analyze#create"
+    post "clinical_review", to: "clinical_review#create"
+    post "upload", to: "upload#create"
+
+    # Retrieval (RAG) endpoints
+    post "retrieval/index", to: "retrieval#index_document"
+    post "retrieval/query", to: "retrieval#query"
+
+    # PubMed literature search
+    post "pubmed/search", to: "pubmed#search"
+
+    # Observability
+    namespace :ops do
+      get "metrics", to: "metrics#show"
+    end
+  end
+
+  # Health check
   get "up" => "rails/health#show", as: :rails_health_check
-
-  # Render dynamic PWA files from app/views/pwa/* (remember to link manifest in application.html.erb)
-  # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
-  # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
-
-  # Defines the root path route ("/")
-  # root "posts#index"
 end

@@ -1,0 +1,69 @@
+<%# FHIR Explorer Panel %>
+<div data-controller="fhir" class="space-y-6">
+  <div>
+    <h2 class="text-2xl font-bold text-white">FHIR Explorer</h2>
+    <p class="text-gray-400 text-sm mt-1">Browse and query FHIR R4 resources from connected servers</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <%# Connection & Query %>
+    <div class="space-y-4">
+      <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+        <h3 class="text-sm font-semibold text-gray-300 mb-3">FHIR Server</h3>
+        <input type="url"
+               data-fhir-target="serverUrl"
+               placeholder="https://hapi.fhir.org/baseR4"
+               value="https://hapi.fhir.org/baseR4"
+               class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50">
+        <button data-action="click->fhir#testConnection"
+                data-fhir-target="connectBtn"
+                class="mt-2 w-full py-2 text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition-colors">
+          Test Connection
+        </button>
+        <div data-fhir-target="connectionStatus" class="mt-2 text-xs"></div>
+      </div>
+
+      <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+        <h3 class="text-sm font-semibold text-gray-300 mb-3">Resource Query</h3>
+        <select data-fhir-target="resourceType"
+                class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50">
+          <option value="Patient">Patient</option>
+          <option value="Observation">Observation</option>
+          <option value="Condition">Condition</option>
+          <option value="MedicationRequest">MedicationRequest</option>
+          <option value="Encounter">Encounter</option>
+          <option value="DiagnosticReport">DiagnosticReport</option>
+          <option value="Procedure">Procedure</option>
+          <option value="AllergyIntolerance">AllergyIntolerance</option>
+        </select>
+
+        <input type="text"
+               data-fhir-target="searchParams"
+               placeholder="Search parameters (e.g., name=Smith)"
+               class="mt-2 w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50">
+
+        <button data-action="click->fhir#search"
+                data-fhir-target="searchBtn"
+                class="mt-2 w-full py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors">
+          Search
+        </button>
+      </div>
+    </div>
+
+    <%# Results %>
+    <div class="lg:col-span-2 bg-gray-900 rounded-xl border border-gray-800 flex flex-col" style="min-height: 500px;">
+      <div class="p-4 border-b border-gray-800 flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-gray-300">Results</h3>
+        <span data-fhir-target="resultCount" class="text-xs text-gray-500"></span>
+      </div>
+      <div data-fhir-target="results" class="flex-1 overflow-y-auto p-4">
+        <div class="flex items-center justify-center h-full text-gray-600 text-sm">
+          <p class="text-center">
+            Connect to a FHIR server and search for resources.<br>
+            <span class="text-xs">Supports FHIR R4 (HL7 v4.0.1)</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

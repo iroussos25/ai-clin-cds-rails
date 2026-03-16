@@ -1,0 +1,67 @@
+<%# Benchmarks Panel %>
+<div data-controller="benchmarks" class="space-y-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h2 class="text-2xl font-bold text-white">Benchmarks</h2>
+      <p class="text-gray-400 text-sm mt-1">System performance metrics and model usage analytics</p>
+    </div>
+    <button data-action="click->benchmarks#refresh"
+            data-benchmarks-target="refreshBtn"
+            class="px-3 py-1.5 text-sm bg-gray-800 text-gray-300 hover:bg-gray-700 rounded-lg border border-gray-700 transition-colors">
+      Refresh Metrics
+    </button>
+  </div>
+
+  <%# Summary Cards %>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wider">Total Requests</p>
+      <p data-benchmarks-target="totalRequests" class="text-2xl font-bold text-white mt-1">—</p>
+    </div>
+    <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wider">Avg Latency</p>
+      <p data-benchmarks-target="avgLatency" class="text-2xl font-bold text-white mt-1">—</p>
+    </div>
+    <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wider">Error Rate</p>
+      <p data-benchmarks-target="errorRate" class="text-2xl font-bold text-white mt-1">—</p>
+    </div>
+    <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wider">Uptime</p>
+      <p data-benchmarks-target="uptime" class="text-2xl font-bold text-white mt-1">—</p>
+    </div>
+  </div>
+
+  <%# Route Breakdown %>
+  <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+    <h3 class="text-sm font-semibold text-gray-300 mb-4">Route Performance</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-800">
+            <th class="text-left py-2 px-3 text-gray-500 font-medium">Route</th>
+            <th class="text-right py-2 px-3 text-gray-500 font-medium">Requests</th>
+            <th class="text-right py-2 px-3 text-gray-500 font-medium">Avg (ms)</th>
+            <th class="text-right py-2 px-3 text-gray-500 font-medium">P95 (ms)</th>
+            <th class="text-right py-2 px-3 text-gray-500 font-medium">Errors</th>
+          </tr>
+        </thead>
+        <tbody data-benchmarks-target="routeTable">
+          <tr>
+            <td colspan="5" class="py-8 text-center text-gray-600 text-sm">
+              Click Refresh to load metrics
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <%# Model Usage %>
+  <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+    <h3 class="text-sm font-semibold text-gray-300 mb-4">Model Usage</h3>
+    <div data-benchmarks-target="modelUsage" class="space-y-3">
+      <p class="text-gray-600 text-sm text-center py-4">No model usage data available</p>
+    </div>
+  </div>
+</div>

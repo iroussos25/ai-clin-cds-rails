@@ -1,0 +1,6 @@
+<%# Turbo Stream broadcast for analysis results %>
+<%= turbo_stream.replace "analysis-result" do %>
+  <div id="analysis-result" class="prose prose-invert prose-sm max-w-none text-gray-300 leading-relaxed">
+    <%= simple_format(result) %>
+  </div>
+<% end %>

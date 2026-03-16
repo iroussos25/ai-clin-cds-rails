@@ -1,0 +1,10 @@
+<div data-controller="workbench" class="space-y-6">
+  <%# Panel container - shows/hides panels via Stimulus %>
+  <% @panels.each do |panel| %>
+    <div data-navigation-target="panel"
+         data-panel="<%= panel %>"
+         class="<%= panel == @active_panel ? '' : 'hidden' %>">
+      <%= render partial: "workbench/panels/#{panel.underscore.tr('-', '_')}" %>
+    </div>
+  <% end %>
+</div>

@@ -4,8 +4,10 @@ source "https://rubygems.org"
 gem "rails", "~> 8.1.2"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
 gem "propshaft"
-# Use sqlite3 as the database for Active Record
-gem "sqlite3", ">= 2.1"
+# Use PostgreSQL as the database for Active Record
+gem "pg", "~> 1.5"
+# pgvector support for vector similarity search
+gem "neighbor", "~> 0.5"
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
 # Use JavaScript with ESM import maps [https://github.com/rails/importmap-rails]
@@ -16,6 +18,15 @@ gem "turbo-rails"
 gem "stimulus-rails"
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"
+# Tailwind CSS for Rails [https://github.com/rails/tailwindcss-rails]
+gem "tailwindcss-rails", "~> 4.2"
+
+# Rate limiting and request throttling
+gem "rack-attack", "~> 6.7"
+# PDF text extraction
+gem "pdf-reader", "~> 2.12"
+# HTTP client for external API calls (Google Gemini, PubMed, FHIR)
+gem "httpx", "~> 1.3"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # gem "bcrypt", "~> 3.1.7"
