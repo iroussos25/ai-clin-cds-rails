@@ -26,8 +26,13 @@ module Api
       # Optionally augment with RAG context
       rag_context = ""
       if use_rag
-        chunks = DocumentChunk.match(text, limit: 3)
-        rag_context = chunks.map(&:content).join("\n\n") if chunks.any?
+        begin
+          query_embedding = EmbeddingService.new.embed(text)
+          chunks = DocumentChunk.match(query_embedding, match_count: 3)
+          rag_context = chunks.map { |chunk| chunk[:content] }.join("\n\n") if chunks.any?
+        rescue EmbeddingService::EmbeddingError => e
+          Rails.logger.warn("[AnalyzeController] RAG embedding failed: #{e.message}")
+        end
       end
 
       prompt_content = "<clinical_document_context>\n#{text}\n</clinical_document_context>"

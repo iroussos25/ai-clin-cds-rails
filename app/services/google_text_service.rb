@@ -1,3 +1,8 @@
+require "cgi"
+require "json"
+require "net/http"
+require "uri"
+
 class GoogleTextService
   FALLBACK_MODELS = %w[
     gemini-2.5-flash

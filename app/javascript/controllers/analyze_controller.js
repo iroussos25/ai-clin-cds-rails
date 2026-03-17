@@ -4,17 +4,19 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = [
     "input", "output", "charCount", "submitBtn", "submitText", "spinner",
-    "copyBtn", "ragToggle", "pubmedToggle", "ragPanel", "ragResults",
+    "copyBtn", "demoBtn", "ragToggle", "pubmedToggle", "ragPanel", "ragResults",
     "pubmedPanel", "pubmedResults"
   ]
 
   connect() {
     this.csrfToken = document.querySelector("meta[name='csrf-token']")?.content
+    this.updateDemoButtonState()
   }
 
   updateCharCount() {
     const count = this.inputTarget.value.length
     this.charCountTarget.textContent = `${count} characters`
+    this.updateDemoButtonState()
   }
 
   uploadComplete({ detail: { content } }) {
@@ -25,6 +27,11 @@ export default class extends Controller {
   }
 
   loadDemo() {
+    if (this.inputTarget.value.trim().length > 0) {
+      this.clearAll()
+      return
+    }
+
     this.inputTarget.value = `Patient: 68-year-old male with PMH of HTN, DM2, CKD stage 3
 Chief Complaint: Progressive dyspnea on exertion x 2 weeks, orthopnea, bilateral lower extremity edema
 
@@ -38,6 +45,22 @@ ECG: Sinus tachycardia, LVH, no acute ST changes
 Assessment: Acute decompensated heart failure (ADHF) with volume overload
 Plan: IV furosemide 40mg bolus then gtt, strict I/O, daily weights, cardiology consult, echo in AM`
     this.updateCharCount()
+  }
+
+  clearAll() {
+    this.inputTarget.value = ""
+    this.updateCharCount()
+
+    this.outputTarget.innerHTML = `<div class="flex items-center justify-center h-64 text-gray-600">
+      <p class="text-center">
+        Analysis results will appear here.<br>
+        <span class="text-xs">Paste clinical text and click Analyze to begin.</span>
+      </p>
+    </div>`
+
+    this.copyBtnTarget.classList.add("hidden")
+    this.pubmedPanelTarget.classList.add("hidden")
+    this.ragPanelTarget.classList.add("hidden")
   }
 
   async submit() {
@@ -117,6 +140,11 @@ Plan: IV furosemide 40mg bolus then gtt, strict I/O, daily weights, cardiology c
     this.submitBtnTarget.disabled = loading
     this.spinnerTarget.classList.toggle("hidden", !loading)
     this.submitTextTarget.textContent = loading ? "Analyzing..." : "Analyze Clinical Text"
+  }
+
+  updateDemoButtonState() {
+    const hasText = this.inputTarget.value.trim().length > 0
+    this.demoBtnTarget.textContent = hasText ? "Clear" : "Load Demo"
   }
 
   renderMarkdown(text) {
