@@ -4,7 +4,22 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = ["tab", "panel"]
 
+  connect() {
+    this.handleExternalSwitch = this.handleExternalSwitch.bind(this)
+    window.addEventListener("navigation:switch", this.handleExternalSwitch)
+  }
+
+  disconnect() {
+    window.removeEventListener("navigation:switch", this.handleExternalSwitch)
+  }
+
   switchPanel({ params: { panel } }) {
+    this.activatePanel(panel)
+  }
+
+  activatePanel(panel) {
+    if (!panel) return
+
     // Update active tab styling
     this.tabTargets.forEach(tab => {
       const isActive = tab.dataset.panel === panel
@@ -24,5 +39,9 @@ export default class extends Controller {
     const url = new URL(window.location)
     url.searchParams.set("panel", panel)
     history.pushState({}, "", url)
+  }
+
+  handleExternalSwitch(event) {
+    this.activatePanel(event.detail?.panel)
   }
 }

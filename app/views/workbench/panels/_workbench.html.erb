@@ -15,6 +15,16 @@
     </div>
   </div>
 
+  <div class="rounded-2xl border border-amber-400/40 bg-gradient-to-r from-amber-500/15 to-orange-500/10 p-4 shadow-lg shadow-amber-950/10">
+    <div class="flex items-start gap-3">
+      <div class="mt-0.5 rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-200">Important</div>
+      <div>
+        <p class="text-sm font-semibold text-amber-100">AI output is decision support only.</p>
+        <p class="mt-1 text-sm leading-relaxed text-amber-50/85">Treat every summary, differential, and recommendation in this workspace as preliminary. A licensed clinician must independently verify the source data, interpretation, and any resulting clinical action.</p>
+      </div>
+    </div>
+  </div>
+
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <%# Input Section %>
     <div class="space-y-4">
@@ -53,13 +63,15 @@
         <h3 class="text-sm font-semibold text-gray-300 mb-3">Analysis Options</h3>
         <div class="flex flex-wrap gap-2">
           <label class="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-800 rounded-lg text-sm text-gray-300 cursor-pointer hover:bg-gray-750">
-            <input type="checkbox" data-analyze-target="ragToggle" class="rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500/50">
-            <span>Use RAG Context</span>
+            <input type="checkbox" data-analyze-target="disableRagToggle" class="rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500/50">
+            <span>Disable RAG Indexing</span>
           </label>
-          <label class="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-800 rounded-lg text-sm text-gray-300 cursor-pointer hover:bg-gray-750">
-            <input type="checkbox" data-analyze-target="pubmedToggle" class="rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500/50">
-            <span>PubMed Search</span>
-          </label>
+          <button data-action="click->analyze#goToClinicalReview"
+                  data-analyze-target="reviewBtn"
+                  disabled
+                  class="px-3 py-1.5 text-sm rounded-lg border transition-colors bg-gray-800 text-gray-500 border-gray-700 cursor-not-allowed">
+            Clinical Review
+          </button>
         </div>
       </div>
 
@@ -79,7 +91,13 @@
     <div class="space-y-4">
       <div class="bg-gray-900 rounded-xl border border-gray-800 p-4 min-h-[400px]">
         <div class="flex items-center justify-between mb-3">
-          <h3 class="text-sm font-semibold text-gray-300">Analysis Result</h3>
+          <div class="flex items-center gap-3">
+            <h3 class="text-sm font-semibold text-gray-300">Analysis Result</h3>
+            <div data-analyze-target="loadingIndicator" class="hidden items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-[11px] font-medium text-blue-200">
+              <span class="inline-block h-2.5 w-2.5 rounded-full bg-blue-400 animate-pulse"></span>
+              AI is analyzing the note
+            </div>
+          </div>
           <button data-action="click->analyze#copyResult"
                   data-analyze-target="copyBtn"
                   class="hidden text-xs text-gray-500 hover:text-gray-300 transition-colors">
@@ -99,15 +117,17 @@
 
       <%# RAG Context Panel (shown when RAG is active) %>
       <div data-analyze-target="ragPanel" class="hidden bg-gray-900 rounded-xl border border-gray-800 p-4">
-        <h3 class="text-sm font-semibold text-gray-300 mb-3">Retrieved Context</h3>
+        <h3 class="text-sm font-semibold text-gray-300 mb-1">Evidence and Citations</h3>
+        <p class="text-xs text-gray-500 mb-3">Inline citations in the analysis map to these indexed note references.</p>
         <div data-analyze-target="ragResults" class="space-y-2 text-sm text-gray-400"></div>
       </div>
 
-      <%# PubMed Results (shown when PubMed is active) %>
-      <div data-analyze-target="pubmedPanel" class="hidden bg-gray-900 rounded-xl border border-gray-800 p-4">
-        <h3 class="text-sm font-semibold text-gray-300 mb-3">PubMed Evidence</h3>
-        <div data-analyze-target="pubmedResults" class="space-y-2 text-sm text-gray-400"></div>
-      </div>
+      <details class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+        <summary class="cursor-pointer list-none text-sm font-semibold text-gray-300">Watch the AI think</summary>
+        <div data-analyze-target="traceContent" class="mt-3 space-y-2 text-sm text-gray-400">
+          <p class="text-sm text-gray-500">Run an analysis to view the processing trace. This shows retrieval and workflow steps, not hidden model reasoning.</p>
+        </div>
+      </details>
     </div>
   </div>
 </div>
