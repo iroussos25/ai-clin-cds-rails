@@ -1,24 +1,32 @@
-# README
+# AI Clinical CDS Rails
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+Rails 8 application for AI-assisted clinical decision support workflows.
 
-Things you may want to cover:
+## Local Setup
 
-* Ruby version
+1. Install Ruby `3.2.10` and bundle dependencies.
+2. Configure a Postgres connection for development via either:
+	- `DATABASE_URL`, or
+	- `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`.
+3. Run:
 
-* System dependencies
+```powershell
+bundle install
+bundle exec rails db:prepare
+bundle exec rails tailwindcss:build
+bundle exec rails server
+```
 
-* Configuration
+If startup says a server is already running, clear stale processes/PID:
 
-* Database creation
+```powershell
+Get-Process ruby -ErrorAction SilentlyContinue | Stop-Process -Force
+Remove-Item tmp\pids\server.pid -ErrorAction SilentlyContinue
+bundle exec rails server
+```
 
-* Database initialization
+## Deployment (Fly.io)
 
-* How to run the test suite
+Fly configuration is in `fly.toml`.
 
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
+Use the full runbook in `DEPLOY_FLY.md`.
