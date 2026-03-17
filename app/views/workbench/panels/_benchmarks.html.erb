@@ -1,67 +1,197 @@
-<%# Benchmarks Panel %>
+<%# Benchmarks Panel — Test Suite + Ops Metrics %>
 <div data-controller="benchmarks" class="space-y-6">
-  <div class="flex items-center justify-between">
-    <div>
-      <h2 class="text-2xl font-bold text-white">Benchmarks</h2>
-      <p class="text-gray-400 text-sm mt-1">System performance metrics and model usage analytics</p>
-    </div>
-    <button data-action="click->benchmarks#refresh"
-            data-benchmarks-target="refreshBtn"
-            class="px-3 py-1.5 text-sm bg-gray-800 text-gray-300 hover:bg-gray-700 rounded-lg border border-gray-700 transition-colors">
-      Refresh Metrics
+  <div>
+    <h2 class="text-2xl font-bold text-white">Benchmarks</h2>
+    <p class="text-gray-400 text-sm mt-1">AI performance test suite and operational metrics</p>
+  </div>
+
+  <%# Sub-tab selector %>
+  <div class="flex gap-1 bg-gray-900 rounded-lg p-1 border border-gray-800 w-fit">
+    <button type="button" data-action="click->benchmarks#switchTab" data-tab="test-suite"
+            data-benchmarks-target="tabBtn"
+            class="px-4 py-1.5 text-sm rounded-md font-medium transition-colors bg-blue-600/20 text-blue-400">
+      🧪 Test Suite
+    </button>
+    <button type="button" data-action="click->benchmarks#switchTab" data-tab="ops-metrics"
+            data-benchmarks-target="tabBtn"
+            class="px-4 py-1.5 text-sm rounded-md font-medium transition-colors text-gray-500 hover:text-gray-300">
+      📊 Ops Metrics
     </button>
   </div>
 
-  <%# Summary Cards %>
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-    <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
-      <p class="text-xs text-gray-500 uppercase tracking-wider">Total Requests</p>
-      <p data-benchmarks-target="totalRequests" class="text-2xl font-bold text-white mt-1">—</p>
+  <%# ═══ TEST SUITE TAB ═══ %>
+  <div data-benchmarks-target="tabPanel" data-tab="test-suite">
+
+    <%# Control panel %>
+    <div class="bg-gray-900 rounded-xl border border-gray-800 p-5 space-y-4">
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div class="flex items-center gap-4">
+          <label class="text-sm text-gray-400">Runs per test:</label>
+          <select data-benchmarks-target="runsSelect"
+                  class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50">
+            <option value="1">1 run</option>
+            <option value="2" selected>2 runs</option>
+            <option value="3">3 runs</option>
+            <option value="5">5 runs</option>
+          </select>
+          <span class="text-xs text-gray-600">5 clinical scenarios</span>
+        </div>
+        <div class="flex gap-2">
+          <button type="button" data-action="click->benchmarks#runTests"
+                  data-benchmarks-target="runBtn"
+                  class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors font-medium">
+            ▶ Run Benchmarks
+          </button>
+          <button type="button" data-action="click->benchmarks#clearResults"
+                  data-benchmarks-target="clearBtn"
+                  class="px-3 py-2 text-sm bg-gray-800 hover:bg-gray-700 text-gray-400 rounded-lg border border-gray-700 transition-colors"
+                  disabled>
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <%# Progress bar %>
+      <div data-benchmarks-target="progressArea" class="hidden">
+        <div class="flex items-center justify-between mb-1">
+          <span data-benchmarks-target="progressMsg" class="text-sm text-blue-400"></span>
+          <span data-benchmarks-target="progressPct" class="text-xs text-gray-500"></span>
+        </div>
+        <div class="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+          <div data-benchmarks-target="progressBar" class="h-full bg-blue-600 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+      </div>
     </div>
-    <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
-      <p class="text-xs text-gray-500 uppercase tracking-wider">Avg Latency</p>
-      <p data-benchmarks-target="avgLatency" class="text-2xl font-bold text-white mt-1">—</p>
-    </div>
-    <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
-      <p class="text-xs text-gray-500 uppercase tracking-wider">Error Rate</p>
-      <p data-benchmarks-target="errorRate" class="text-2xl font-bold text-white mt-1">—</p>
-    </div>
-    <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
-      <p class="text-xs text-gray-500 uppercase tracking-wider">Uptime</p>
-      <p data-benchmarks-target="uptime" class="text-2xl font-bold text-white mt-1">—</p>
+
+    <%# Summary cards (shown after results) %>
+    <div data-benchmarks-target="summaryArea" class="hidden mt-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+          <p class="text-xs text-gray-500 uppercase tracking-wider">Avg Latency</p>
+          <p data-benchmarks-target="sumLatency" class="text-2xl font-bold text-white mt-1">—</p>
+        </div>
+        <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+          <p class="text-xs text-gray-500 uppercase tracking-wider">Total Cost</p>
+          <p data-benchmarks-target="sumCost" class="text-2xl font-bold text-white mt-1">—</p>
+        </div>
+        <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+          <p class="text-xs text-gray-500 uppercase tracking-wider">Avg Consistency</p>
+          <p data-benchmarks-target="sumConsistency" class="text-2xl font-bold text-white mt-1">—</p>
+        </div>
+        <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+          <p class="text-xs text-gray-500 uppercase tracking-wider">Success Rate</p>
+          <p data-benchmarks-target="sumSuccess" class="text-2xl font-bold text-white mt-1">—</p>
+        </div>
+      </div>
+
+      <%# Export + Sort controls %>
+      <div class="flex items-center justify-between mt-4 mb-2">
+        <div class="flex gap-2">
+          <button type="button" data-action="click->benchmarks#exportJson"
+                  class="px-3 py-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-400 rounded border border-gray-700 transition-colors">
+            Export JSON
+          </button>
+          <button type="button" data-action="click->benchmarks#exportCsv"
+                  class="px-3 py-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-400 rounded border border-gray-700 transition-colors">
+            Export CSV
+          </button>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-gray-500">Sort:</span>
+          <select data-action="change->benchmarks#sortResults" data-benchmarks-target="sortSelect"
+                  class="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-300 focus:outline-none">
+            <option value="latency">Latency</option>
+            <option value="cost">Cost</option>
+            <option value="consistency">Consistency</option>
+          </select>
+        </div>
+      </div>
+
+      <%# Results table %>
+      <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-gray-800 bg-gray-900/80">
+                <th class="text-left py-2.5 px-3 text-gray-500 font-medium">Test</th>
+                <th class="text-right py-2.5 px-3 text-gray-500 font-medium">Avg Latency</th>
+                <th class="text-right py-2.5 px-3 text-gray-500 font-medium">Tokens</th>
+                <th class="text-right py-2.5 px-3 text-gray-500 font-medium">Cost</th>
+                <th class="text-right py-2.5 px-3 text-gray-500 font-medium">Citations</th>
+                <th class="text-center py-2.5 px-3 text-gray-500 font-medium">Consistency</th>
+                <th class="text-right py-2.5 px-3 text-gray-500 font-medium">Success</th>
+              </tr>
+            </thead>
+            <tbody data-benchmarks-target="resultsTable">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <%# Expandable detail cards %>
+      <div data-benchmarks-target="detailCards" class="space-y-3 mt-4"></div>
     </div>
   </div>
 
-  <%# Route Breakdown %>
-  <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
-    <h3 class="text-sm font-semibold text-gray-300 mb-4">Route Performance</h3>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-gray-800">
-            <th class="text-left py-2 px-3 text-gray-500 font-medium">Route</th>
-            <th class="text-right py-2 px-3 text-gray-500 font-medium">Requests</th>
-            <th class="text-right py-2 px-3 text-gray-500 font-medium">Avg (ms)</th>
-            <th class="text-right py-2 px-3 text-gray-500 font-medium">P95 (ms)</th>
-            <th class="text-right py-2 px-3 text-gray-500 font-medium">Errors</th>
-          </tr>
-        </thead>
-        <tbody data-benchmarks-target="routeTable">
-          <tr>
-            <td colspan="5" class="py-8 text-center text-gray-600 text-sm">
-              Click Refresh to load metrics
-            </td>
-          </tr>
-        </tbody>
-      </table>
+  <%# ═══ OPS METRICS TAB ═══ %>
+  <div data-benchmarks-target="tabPanel" data-tab="ops-metrics" class="hidden">
+    <div class="flex justify-end mb-4">
+      <button type="button" data-action="click->benchmarks#refreshOps"
+              data-benchmarks-target="refreshBtn"
+              class="px-3 py-1.5 text-sm bg-gray-800 text-gray-300 hover:bg-gray-700 rounded-lg border border-gray-700 transition-colors">
+        Refresh Metrics
+      </button>
     </div>
-  </div>
 
-  <%# Model Usage %>
-  <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
-    <h3 class="text-sm font-semibold text-gray-300 mb-4">Model Usage</h3>
-    <div data-benchmarks-target="modelUsage" class="space-y-3">
-      <p class="text-gray-600 text-sm text-center py-4">No model usage data available</p>
+    <%# Ops summary cards %>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wider">Total Requests</p>
+        <p data-benchmarks-target="totalRequests" class="text-2xl font-bold text-white mt-1">—</p>
+      </div>
+      <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wider">Avg Latency</p>
+        <p data-benchmarks-target="avgLatency" class="text-2xl font-bold text-white mt-1">—</p>
+      </div>
+      <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wider">Error Rate</p>
+        <p data-benchmarks-target="errorRate" class="text-2xl font-bold text-white mt-1">—</p>
+      </div>
+      <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+        <p class="text-xs text-gray-500 uppercase tracking-wider">Uptime</p>
+        <p data-benchmarks-target="uptime" class="text-2xl font-bold text-white mt-1">—</p>
+      </div>
+    </div>
+
+    <%# Route Breakdown %>
+    <div class="bg-gray-900 rounded-xl border border-gray-800 p-5 mt-4">
+      <h3 class="text-sm font-semibold text-gray-300 mb-4">Route Performance</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-800">
+              <th class="text-left py-2 px-3 text-gray-500 font-medium">Route</th>
+              <th class="text-right py-2 px-3 text-gray-500 font-medium">Requests</th>
+              <th class="text-right py-2 px-3 text-gray-500 font-medium">Avg (ms)</th>
+              <th class="text-right py-2 px-3 text-gray-500 font-medium">P95 (ms)</th>
+              <th class="text-right py-2 px-3 text-gray-500 font-medium">Errors</th>
+            </tr>
+          </thead>
+          <tbody data-benchmarks-target="routeTable">
+            <tr>
+              <td colspan="5" class="py-8 text-center text-gray-600 text-sm">Click Refresh to load metrics</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <%# Model Usage %>
+    <div class="bg-gray-900 rounded-xl border border-gray-800 p-5 mt-4">
+      <h3 class="text-sm font-semibold text-gray-300 mb-4">Model Usage</h3>
+      <div data-benchmarks-target="modelUsage" class="space-y-3">
+        <p class="text-gray-600 text-sm text-center py-4">No model usage data available</p>
+      </div>
     </div>
   </div>
 </div>

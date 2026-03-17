@@ -8,6 +8,7 @@ Rails.application.routes.draw do
     post "analyze", to: "analyze#create"
     post "clinical_review", to: "clinical_review#create"
     post "upload", to: "upload#create"
+    post "benchmark", to: "benchmark#create"
 
     # Retrieval (RAG) endpoints
     post "retrieval/index", to: "retrieval#index_document"
