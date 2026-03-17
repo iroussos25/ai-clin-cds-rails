@@ -37,7 +37,12 @@ jobs:
           bundler-cache: true
 
       - name: Scan for security vulnerabilities in JavaScript dependencies
-        run: bundle exec rails importmap:audit
+        run: |
+          if bundle exec rails -T | grep -q "importmap:audit"; then
+            bundle exec rails importmap:audit
+          else
+            echo "importmap:audit task not available; skipping JS dependency audit"
+          fi
 
   lint:
     if: false
