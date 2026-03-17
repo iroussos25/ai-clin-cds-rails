@@ -2,7 +2,7 @@
 <div data-controller="fhir" class="space-y-6">
   <div>
     <h2 class="text-2xl font-bold text-white">FHIR Explorer</h2>
-    <p class="text-gray-400 text-sm mt-1">Browse and query FHIR R4 resources from connected servers</p>
+    <p class="text-gray-400 text-sm mt-1">Browse and query FHIR R4 resources, assemble a patient picture, and import to the workbench for AI analysis</p>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -15,7 +15,8 @@
                placeholder="https://hapi.fhir.org/baseR4"
                value="https://hapi.fhir.org/baseR4"
                class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50">
-        <button data-action="click->fhir#testConnection"
+        <button type="button"
+                data-action="click->fhir#testConnection"
                 data-fhir-target="connectBtn"
                 class="mt-2 w-full py-2 text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition-colors">
           Test Connection
@@ -42,10 +43,39 @@
                placeholder="Search parameters (e.g., name=Smith)"
                class="mt-2 w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50">
 
-        <button data-action="click->fhir#search"
+        <button type="button"
+                data-action="click->fhir#search"
                 data-fhir-target="searchBtn"
                 class="mt-2 w-full py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors">
           Search
+        </button>
+      </div>
+
+      <%# Resource Cart %>
+      <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-semibold text-gray-300">Resource Cart</h3>
+          <span data-fhir-target="cartCount" class="text-xs font-mono px-2 py-0.5 rounded-full bg-gray-800 text-gray-500">0</span>
+        </div>
+
+        <div data-fhir-target="cartList" class="space-y-1 max-h-48 overflow-y-auto text-xs mb-3">
+          <p class="text-gray-600 text-center py-2">Add resources from search results</p>
+        </div>
+
+        <button type="button"
+                data-action="click->fhir#clearCart"
+                data-fhir-target="clearCartBtn"
+                class="w-full py-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-500 rounded-lg border border-gray-700 transition-colors mb-2"
+                disabled>
+          Clear Cart
+        </button>
+
+        <button type="button"
+                data-action="click->fhir#composeAndImport"
+                data-fhir-target="importBtn"
+                class="w-full py-2.5 text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                disabled>
+          📋 Compose &amp; Import to Workbench
         </button>
       </div>
     </div>
@@ -53,17 +83,39 @@
     <%# Results %>
     <div class="lg:col-span-2 bg-gray-900 rounded-xl border border-gray-800 flex flex-col" style="min-height: 500px;">
       <div class="p-4 border-b border-gray-800 flex items-center justify-between">
-        <h3 class="text-sm font-semibold text-gray-300">Results</h3>
-        <span data-fhir-target="resultCount" class="text-xs text-gray-500"></span>
+        <div class="flex items-center gap-3">
+          <h3 class="text-sm font-semibold text-gray-300">Results</h3>
+          <span data-fhir-target="resultCount" class="text-xs text-gray-500"></span>
+        </div>
+        <button type="button"
+                data-action="click->fhir#addAllVisible"
+                data-fhir-target="addAllBtn"
+                class="text-xs text-blue-400 hover:text-blue-300 transition-colors hidden">
+          + Add all to cart
+        </button>
       </div>
       <div data-fhir-target="results" class="flex-1 overflow-y-auto p-4">
         <div class="flex items-center justify-center h-full text-gray-600 text-sm">
           <p class="text-center">
             Connect to a FHIR server and search for resources.<br>
-            <span class="text-xs">Supports FHIR R4 (HL7 v4.0.1)</span>
+            <span class="text-xs mt-1 block">Click <strong class="text-blue-400">+</strong> on any result to add it to your cart, then Compose &amp; Import.</span>
           </p>
         </div>
       </div>
+    </div>
+  </div>
+
+  <%# Composed Preview (shown before import) %>
+  <div data-fhir-target="previewPanel" class="hidden">
+    <div class="bg-gray-900 rounded-xl border border-emerald-800/50 p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold text-emerald-400">📋 Composed Clinical Summary</h3>
+        <div class="flex gap-2">
+          <button type="button" data-action="click->fhir#editComposed" class="text-xs text-gray-400 hover:text-gray-200 px-2 py-1 rounded border border-gray-700 transition-colors">Edit</button>
+          <button type="button" data-action="click->fhir#sendToWorkbench" class="text-xs text-emerald-400 hover:text-emerald-300 px-3 py-1 rounded border border-emerald-700 font-medium transition-colors">Send to Workbench →</button>
+        </div>
+      </div>
+      <pre data-fhir-target="previewText" class="text-xs text-gray-300 whitespace-pre-wrap bg-gray-800/60 rounded-lg p-4 max-h-80 overflow-y-auto leading-relaxed"></pre>
     </div>
   </div>
 </div>

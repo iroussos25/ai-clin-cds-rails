@@ -1,77 +1,150 @@
-import { Controller } from "@hotwired/stimulus"
+﻿import { Controller } from "@hotwired/stimulus"
 
-// Recruiter kit demo controller
+// Recruiter Kit controller — loads kits into workbench, guided demo, rubric scoring
 export default class extends Controller {
-  static targets = [
-    "preview", "previewTitle", "previewContent", "analyzeBtn",
-    "result", "resultContent"
-  ]
+  static targets = ["kitData", "demoGuide", "demoStep", "advanceBtn", "rubricCount", "rubricAvg"]
 
   connect() {
-    this.kits = JSON.parse(document.querySelector("[data-recruiter-kits]")?.dataset.recruiterKits || "[]")
-    this.csrfToken = document.querySelector("meta[name='csrf-token']")?.content
-    this.currentKit = null
+    this.kits = JSON.parse(this.kitDataTarget.textContent || "[]")
+    this.rubricScores = {} // { kitId: { criterionIndex: score } }
+    this.demoMode = false
+    this.demoStepNum = 1
   }
 
-  loadKit({ params: { index } }) {
-    // Fetch kit data from the server-rendered data attribute
-    this.currentKit = this.kits[index]
-    if (!this.currentKit) return
-
-    this.previewTitleTarget.textContent = this.currentKit.title
-    this.previewContentTarget.textContent = this.currentKit.clinical_text
-    this.previewTarget.classList.remove("hidden")
-    this.resultTarget.classList.add("hidden")
+  // -- Load in Workbench (no prompt) --
+  loadInWorkbench({ params: { index } }) {
+    const kit = this.kits[index]
+    if (!kit) return
+    this._sendToWorkbench(kit, "")
   }
 
-  async analyzeKit() {
-    if (!this.currentKit) return
+  // -- Load with a specific prompt --
+  loadWithPrompt({ params: { index, prompt: promptIndex } }) {
+    const kit = this.kits[index]
+    if (!kit) return
+    const promptText = kit.prompts?.[promptIndex] || ""
+    this._sendToWorkbench(kit, promptText)
+  }
 
-    this.analyzeBtnTarget.disabled = true
-    this.analyzeBtnTarget.textContent = "Analyzing..."
-    this.resultTarget.classList.remove("hidden")
-    this.resultContentTarget.innerHTML = '<p class="text-gray-500 animate-pulse">Analyzing clinical text...</p>'
+  // -- Start Guided Demo --
+  startDemo({ params: { index } }) {
+    const kit = this.kits[index]
+    if (!kit) return
 
-    try {
-      const response = await fetch("/api/analyze", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": this.csrfToken
-        },
-        body: JSON.stringify({ text: this.currentKit.clinical_text })
-      })
+    // Load kit with first prompt pre-filled
+    this._sendToWorkbench(kit, kit.prompts?.[0] || "")
 
-      const data = await response.json()
+    // Show demo guide
+    this.demoMode = true
+    this.demoStepNum = 1
+    this._updateDemoUI()
+    this.demoGuideTarget.classList.remove("hidden")
+  }
 
-      if (response.ok) {
-        this.resultContentTarget.innerHTML = this.renderMarkdown(data.analysis || data.result)
-      } else {
-        this.resultContentTarget.innerHTML = `<p class="text-red-400">Error: ${data.error || "Analysis failed"}</p>`
+  advanceDemo() {
+    this.demoStepNum = Math.min(this.demoStepNum + 1, 4)
+    this._updateDemoUI()
+  }
+
+  stopDemo() {
+    this.demoMode = false
+    this.demoStepNum = 1
+    this.demoGuideTarget.classList.add("hidden")
+  }
+
+  // -- Rubric Scoring --
+  setScore({ params: { kit: kitId, criterion, score } }) {
+    if (!this.rubricScores[kitId]) this.rubricScores[kitId] = {}
+    this.rubricScores[kitId][criterion] = score
+
+    // Update button styles
+    document.querySelectorAll(`[data-rubric-key="${kitId}-${criterion}"]`).forEach(btn => {
+      const btnScore = parseInt(btn.dataset.recruiterKitScoreParam)
+      const isSelected = btnScore === score
+      btn.classList.toggle("bg-indigo-600", isSelected)
+      btn.classList.toggle("text-white", isSelected)
+      btn.classList.toggle("border-indigo-500", isSelected)
+      btn.classList.toggle("border-gray-700", !isSelected)
+      btn.classList.toggle("text-gray-500", !isSelected)
+    })
+
+    this._updateRubricDisplay(kitId)
+  }
+
+  clearScores({ params: { kit: kitId } }) {
+    delete this.rubricScores[kitId]
+
+    // Reset all button styles for this kit
+    document.querySelectorAll(`[data-rubric-key^="${kitId}-"]`).forEach(btn => {
+      btn.classList.remove("bg-indigo-600", "text-white", "border-indigo-500")
+      btn.classList.add("border-gray-700", "text-gray-500")
+    })
+
+    this._updateRubricDisplay(kitId)
+  }
+
+  // -- Private --
+
+  _sendToWorkbench(kit, promptText) {
+    // Dispatch event for the analyze controller to pick up
+    window.dispatchEvent(new CustomEvent("recruiter-kit:load", {
+      detail: {
+        title: kit.title,
+        clinicalText: kit.clinical_text,
+        prompt: promptText
       }
-    } catch (error) {
-      this.resultContentTarget.innerHTML = `<p class="text-red-400">Network error: ${error.message}</p>`
-    } finally {
-      this.analyzeBtnTarget.disabled = false
-      this.analyzeBtnTarget.textContent = "Analyze with AI"
+    }))
+
+    // Switch to workbench panel
+    window.dispatchEvent(new CustomEvent("navigation:switch", {
+      detail: { panel: "workbench" }
+    }))
+  }
+
+  _updateDemoUI() {
+    this.demoStepTargets.forEach(el => {
+      const step = parseInt(el.dataset.step)
+      const isActive = step === this.demoStepNum
+      const isDone = step < this.demoStepNum
+      el.classList.toggle("bg-amber-400/20", isActive)
+      el.classList.toggle("text-amber-100", isActive || isDone)
+      el.classList.toggle("text-amber-300/60", !isActive && !isDone)
+    })
+
+    if (this.hasAdvanceBtnTarget) {
+      this.advanceBtnTarget.textContent = this.demoStepNum >= 4 ? "Done" : "Next Step"
+      if (this.demoStepNum >= 4) {
+        this.advanceBtnTarget.dataset.action = "click->recruiter-kit#stopDemo"
+      } else {
+        this.advanceBtnTarget.dataset.action = "click->recruiter-kit#advanceDemo"
+      }
     }
   }
 
-  closePreview() {
-    this.previewTarget.classList.add("hidden")
-    this.currentKit = null
-  }
+  _updateRubricDisplay(kitId) {
+    const scores = this.rubricScores[kitId] || {}
+    const entries = Object.values(scores)
+    const count = entries.length
 
-  renderMarkdown(text) {
-    if (!text) return ""
-    return text
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-      .replace(/\*(.*?)\*/g, "<em>$1</em>")
-      .replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold text-white mt-4 mb-2">$1</h3>')
-      .replace(/^## (.+)$/gm, '<h2 class="text-xl font-bold text-white mt-4 mb-2">$1</h2>')
-      .replace(/^- (.+)$/gm, '<li class="ml-4">$1</li>')
-      .replace(/\n\n/g, "</p><p class='mt-2'>")
-      .replace(/\n/g, "<br>")
+    // Update count badge
+    this.rubricCountTargets.forEach(el => {
+      if (el.dataset.kit === kitId) {
+        const total = el.textContent.match(/\/(\d+)/)?.[1] || "?"
+        el.textContent = `Scored: ${count}/${total}`
+      }
+    })
+
+    // Update average badge
+    this.rubricAvgTargets.forEach(el => {
+      if (el.dataset.kit === kitId) {
+        if (count > 0) {
+          const avg = (entries.reduce((a, b) => a + b, 0) / count).toFixed(1)
+          el.textContent = `Avg: ${avg}`
+          el.classList.remove("hidden")
+        } else {
+          el.classList.add("hidden")
+        }
+      }
+    })
   }
 }

@@ -3,7 +3,7 @@ module ApplicationHelper
     "workbench" => { label: "Analysis Workbench", icon: "🔬" },
     "clinical-review" => { label: "Clinical Review", icon: "📋" },
     "recruiter-kit" => { label: "Recruiter Kit", icon: "📦" },
-    "fhir" => { label: "FHIR Explorer", icon: "🔥" },
+    "fhir" => { label: "FHIR Explorer", icon: "⚕️" },
     "benchmarks" => { label: "Benchmarks", icon: "📊" }
   }.freeze
 

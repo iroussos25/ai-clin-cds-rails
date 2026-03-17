@@ -14,10 +14,18 @@ export default class extends Controller {
     this.tracePlaybackTimer = null
     this.updateDemoButtonState()
     this.updateReviewButtonState()
+
+    // Listen for external data loads (recruiter kit, FHIR import)
+    this._onRecruiterLoad = this._handleRecruiterLoad.bind(this)
+    this._onFhirImport = this._handleFhirImport.bind(this)
+    window.addEventListener("recruiter-kit:load", this._onRecruiterLoad)
+    window.addEventListener("fhir:import", this._onFhirImport)
   }
 
   disconnect() {
     this.stopTracePlayback()
+    window.removeEventListener("recruiter-kit:load", this._onRecruiterLoad)
+    window.removeEventListener("fhir:import", this._onFhirImport)
   }
 
   updateCharCount() {
@@ -73,6 +81,29 @@ Plan: IV furosemide 40mg bolus then gtt, strict I/O, daily weights, cardiology c
     this.traceContentTarget.innerHTML = this.tracePlaceholder()
     this.reviewState = null
     this.updateReviewButtonState()
+  }
+
+  // Handle recruiter kit load — populate workbench with kit data
+  _handleRecruiterLoad(event) {
+    const { clinicalText, prompt } = event.detail || {}
+    if (!clinicalText) return
+
+    // Clear existing state first
+    this.clearAll()
+
+    // Load the clinical text
+    this.inputTarget.value = clinicalText
+    this.updateCharCount()
+  }
+
+  // Handle FHIR import — populate workbench with composed clinical summary
+  _handleFhirImport(event) {
+    const { clinicalText } = event.detail || {}
+    if (!clinicalText) return
+
+    this.clearAll()
+    this.inputTarget.value = clinicalText
+    this.updateCharCount()
   }
 
   async submit() {

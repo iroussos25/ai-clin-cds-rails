@@ -1,58 +1,150 @@
 <%# Recruiter Kit Panel %>
 <div data-controller="recruiter-kit" class="space-y-6">
-  <div data-recruiter-kits='<%= @recruiter_kits.map { |k| { title: k[:title], clinical_text: k[:clinical_text], prompts: k[:prompts] } }.to_json %>'></div>
+  <%# Kit data for JS %>
+  <script type="application/json" data-recruiter-kit-target="kitData">
+    <%= @recruiter_kits.map { |k| { id: k[:id], title: k[:title], clinical_text: k[:clinical_text], prompts: k[:prompts] } }.to_json.html_safe %>
+  </script>
+
+  <%# Header %>
   <div>
-    <h2 class="text-2xl font-bold text-white">Recruiter Kit</h2>
-    <p class="text-gray-400 text-sm mt-1">Pre-loaded clinical scenarios demonstrating AI analysis capabilities</p>
+    <h2 class="text-2xl font-bold text-white">Recruiter Test Kits</h2>
+    <p class="text-gray-400 text-sm mt-1">Pre-loaded synthetic clinical scenarios for evaluation. Load any case into the Workbench, then analyze or send to Clinical Review.</p>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <% @recruiter_kits.each_with_index do |kit, index| %>
-      <div class="bg-gray-900 rounded-xl border border-gray-800 p-5 hover:border-gray-700 transition-colors cursor-pointer group"
-           data-action="click->recruiter-kit#loadKit"
-           data-recruiter-kit-index-param="<%= index %>">
-        <div class="flex items-start justify-between">
-          <div>
-            <h3 class="text-white font-semibold group-hover:text-blue-400 transition-colors">
-              <%= kit[:title] %>
-            </h3>
-            <p class="text-gray-500 text-sm mt-1"><%= kit[:summary] %></p>
+  <div class="rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3">
+    <p class="text-sm text-cyan-300/90">
+      <strong>Tip:</strong> Load a recruiter kit, summarize it in Workbench, then move into Clinical Review for higher-level follow-up questions.
+    </p>
+  </div>
+
+  <%# Demo Guide Overlay (hidden by default) %>
+  <div data-recruiter-kit-target="demoGuide" class="hidden">
+    <div class="rounded-xl border border-amber-400/30 bg-amber-400/10 p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-bold text-amber-200">Guided Demo</h3>
+        <button type="button" data-action="click->recruiter-kit#stopDemo"
+                class="text-xs text-amber-400 hover:text-amber-300 transition-colors">Exit Demo</button>
+      </div>
+      <div class="space-y-2">
+        <% ["Load a recruiter test kit from this panel.",
+            "Run vector indexing from the Workbench.",
+            "Submit a suggested prompt and inspect the streamed answer.",
+            "Open citations to show grounded evidence chunks."].each_with_index do |step, i| %>
+          <div data-recruiter-kit-target="demoStep" data-step="<%= i + 1 %>"
+               class="flex items-center gap-3 text-sm rounded-lg px-3 py-2 transition-colors
+                      <%= i == 0 ? 'bg-amber-400/20 text-amber-100' : 'text-amber-300/60' %>">
+            <span class="flex-shrink-0 w-6 h-6 rounded-full border border-current flex items-center justify-center text-xs font-bold"><%= i + 1 %></span>
+            <span><%= step %></span>
           </div>
-          <span class="text-xs px-2 py-1 bg-gray-800 text-gray-400 rounded-md"><%= kit[:category] %></span>
-        </div>
-        <div class="mt-3 text-xs text-gray-600">
-          <%= kit[:note_length_label] %>
-        </div>
+        <% end %>
       </div>
-    <% end %>
-  </div>
-
-  <%# Kit Preview/Analysis Section %>
-  <div data-recruiter-kit-target="preview" class="hidden">
-    <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
-      <div class="flex items-center justify-between mb-4">
-        <h3 data-recruiter-kit-target="previewTitle" class="text-lg font-semibold text-white"></h3>
-        <div class="flex gap-2">
-          <button data-action="click->recruiter-kit#analyzeKit"
-                  data-recruiter-kit-target="analyzeBtn"
-                  class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors">
-            Analyze with AI
-          </button>
-          <button data-action="click->recruiter-kit#closePreview"
-                  class="px-3 py-1.5 text-sm bg-gray-800 text-gray-300 hover:bg-gray-700 rounded-lg transition-colors">
-            Close
-          </button>
-        </div>
-      </div>
-      <div data-recruiter-kit-target="previewContent"
-           class="prose prose-invert prose-sm max-w-none text-gray-400 max-h-96 overflow-y-auto whitespace-pre-wrap text-xs font-mono bg-gray-800/50 rounded-lg p-4"></div>
-    </div>
-
-    <%# Analysis Result %>
-    <div data-recruiter-kit-target="result" class="hidden mt-4 bg-gray-900 rounded-xl border border-gray-800 p-5">
-      <h3 class="text-sm font-semibold text-gray-300 mb-3">AI Analysis</h3>
-      <div data-recruiter-kit-target="resultContent"
-           class="prose prose-invert prose-sm max-w-none text-gray-300"></div>
+      <button type="button" data-action="click->recruiter-kit#advanceDemo"
+              data-recruiter-kit-target="advanceBtn"
+              class="mt-3 px-3 py-1.5 text-xs bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 rounded-lg border border-amber-400/30 transition-colors">
+        Next Step
+      </button>
     </div>
   </div>
+
+  <%# Kit Cards grouped by category %>
+  <% grouped = @recruiter_kits.group_by { |k| k[:category] } %>
+  <% grouped.each do |category, kits| %>
+    <div class="space-y-3">
+      <div class="flex items-center gap-2">
+        <h3 class="text-sm font-semibold text-gray-300"><%= category %></h3>
+        <span class="text-xs text-gray-600"><%= kits.size %> synthetic case<%= kits.size == 1 ? '' : 's' %></span>
+      </div>
+
+      <% kits.each do |kit| %>
+        <% kit_index = @recruiter_kits.index(kit) %>
+        <div class="bg-gray-900 rounded-xl border border-gray-800 p-5 hover:border-gray-700 transition-colors">
+          <%# Header %>
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex-1">
+              <h4 class="text-white font-semibold"><%= kit[:title] %></h4>
+              <p class="text-gray-500 text-sm mt-1"><%= kit[:summary] %></p>
+            </div>
+            <span class="flex-shrink-0 text-xs px-2 py-1 bg-cyan-900/40 text-cyan-400 rounded-md border border-cyan-500/20">
+              <%= kit[:note_length_label] %>
+            </span>
+          </div>
+
+          <%# Action buttons %>
+          <div class="mt-4 flex flex-wrap items-center gap-2">
+            <button type="button"
+                    data-action="click->recruiter-kit#loadInWorkbench"
+                    data-recruiter-kit-index-param="<%= kit_index %>"
+                    class="px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors font-medium">
+              Load in Workbench
+            </button>
+            <button type="button"
+                    data-action="click->recruiter-kit#startDemo"
+                    data-recruiter-kit-index-param="<%= kit_index %>"
+                    class="px-3 py-1.5 text-sm bg-amber-600/80 hover:bg-amber-500/80 text-white rounded-lg transition-colors font-medium">
+              Start Guided Demo
+            </button>
+          </div>
+
+          <%# Prompt buttons %>
+          <% if kit[:prompts].present? %>
+            <div class="mt-3 space-y-1.5">
+              <p class="text-xs text-gray-600 font-medium">Suggested prompts:</p>
+              <% kit[:prompts].each_with_index do |prompt, pi| %>
+                <button type="button"
+                        data-action="click->recruiter-kit#loadWithPrompt"
+                        data-recruiter-kit-index-param="<%= kit_index %>"
+                        data-recruiter-kit-prompt-param="<%= pi %>"
+                        class="block w-full text-left px-3 py-2 text-xs text-indigo-300 bg-indigo-900/20 hover:bg-indigo-900/40 rounded-lg border border-indigo-500/15 transition-colors truncate"
+                        title="<%= prompt %>">
+                  Use Prompt: <%= truncate(prompt, length: 100) %>
+                </button>
+              <% end %>
+            </div>
+          <% end %>
+
+          <%# Scoring rubric (ICU kits only) %>
+          <% if kit[:scoring_rubric].present? %>
+            <div class="mt-4 border-t border-gray-800 pt-4">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <h5 class="text-xs font-semibold text-gray-400">Recruiter Scoring Rubric (1–5)</h5>
+                  <span data-recruiter-kit-target="rubricCount" data-kit="<%= kit[:id] %>"
+                        class="text-xs text-gray-600">Scored: 0/<%= kit[:scoring_rubric].size %></span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span data-recruiter-kit-target="rubricAvg" data-kit="<%= kit[:id] %>"
+                        class="text-xs px-2 py-0.5 bg-emerald-900/30 text-emerald-400 rounded-md hidden">Avg: –</span>
+                  <button type="button"
+                          data-action="click->recruiter-kit#clearScores"
+                          data-recruiter-kit-kit-param="<%= kit[:id] %>"
+                          class="text-xs text-gray-600 hover:text-gray-400 transition-colors">Clear Scores</button>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <% kit[:scoring_rubric].each_with_index do |criterion, ci| %>
+                  <div class="bg-gray-800/50 rounded-lg p-3">
+                    <p class="text-xs text-gray-400 mb-2"><%= criterion %></p>
+                    <div class="flex gap-1">
+                      <% (1..5).each do |score| %>
+                        <button type="button"
+                                data-action="click->recruiter-kit#setScore"
+                                data-recruiter-kit-kit-param="<%= kit[:id] %>"
+                                data-recruiter-kit-criterion-param="<%= ci %>"
+                                data-recruiter-kit-score-param="<%= score %>"
+                                class="rubric-btn w-8 h-8 text-xs rounded-md border transition-colors
+                                       border-gray-700 text-gray-500 hover:border-indigo-500 hover:text-indigo-400"
+                                data-rubric-key="<%= kit[:id] %>-<%= ci %>">
+                          <%= score %>
+                        </button>
+                      <% end %>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
 </div>
