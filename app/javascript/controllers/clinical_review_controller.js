@@ -2,22 +2,39 @@ import { Controller } from "@hotwired/stimulus"
 
 // Multi-turn clinical review chat controller
 export default class extends Controller {
+  static REQUEST_TIMEOUT_MS = 70000
+
   static targets = [
     "input", "messages", "submitBtn", "submitText", "submitSpinner", "activityIndicator", "messageCount",
-    "evidencePanel", "noteEvidencePanel", "literatureQuery", "importPanel", "importSource",
+    "statusBadge", "modelDisplay", "suggestionsSection", "evidencePanel", "noteEvidencePanel", "literatureQuery", "importPanel", "importSource",
     "importAnalysis", "traceContent", "suggestions", "suggestionsTitle"
   ]
 
   connect() {
     this.history = []
+    this.allowSubmit = false
     this.csrfToken = document.querySelector("meta[name='csrf-token']")?.content
     this.tracePlaybackTimer = null
     this.handleHandoff = this.handleHandoff.bind(this)
     window.addEventListener("clinical-review:handoff", this.handleHandoff)
+
+    // Verify critical targets exist in the DOM
+    const missing = ["messages", "input", "submitBtn", "submitText", "submitSpinner",
+      "activityIndicator", "statusBadge", "traceContent", "evidencePanel",
+      "noteEvidencePanel", "literatureQuery", "suggestionsSection", "suggestions"
+    ].filter(name => !this.element.querySelector(`[data-clinical-review-target~="${name}"]`))
+    if (missing.length) {
+      console.error("[ClinicalReview] Missing targets in DOM:", missing)
+    }
+    console.debug("[ClinicalReview] v5 connect — all targets OK:", missing.length === 0)
+
     this.renderTrace([])
     this.showEvidence([])
     this.showNoteEvidence([])
-    this.literatureQueryTarget.textContent = "PubMed query generated automatically from the latest review question."
+    this.resetIdleUiState()
+    if (this.hasLiteratureQueryTarget) this.literatureQueryTarget.textContent = "PubMed query generated automatically from the latest review question."
+    this.setStatusBadge("idle", "Idle")
+    if (this.hasModelDisplayTarget) this.modelDisplayTarget.textContent = "Pending"
     this.renderSuggestions()
   }
 
@@ -33,7 +50,22 @@ export default class extends Controller {
     }
   }
 
-  async submit() {
+  runReview(event) {
+    event?.preventDefault?.()
+    console.debug("[ClinicalReview] runReview triggered")
+    this.allowSubmit = true
+    this.submit(event)
+  }
+
+  async submit(event) {
+    event?.preventDefault?.()
+    if (!this.allowSubmit) {
+      console.debug("[ClinicalReview] submit blocked: allowSubmit is false")
+      return
+    }
+    this.allowSubmit = false
+    console.debug("[ClinicalReview] submit proceeding")
+
     const text = this.inputTarget.value.trim()
     if (!text) return
 
@@ -45,6 +77,7 @@ export default class extends Controller {
 
     this.submitBtnTarget.disabled = true
     this.setLoading(true)
+    this.setStatusBadge("active", "Preparing request")
     this.startTracePlayback([
       {
         title: "Conversation prep",
@@ -60,8 +93,13 @@ export default class extends Controller {
       }
     ])
 
+    let timeoutId = null
+
     try {
       const body = { messages: this.history }
+      const requestController = new AbortController()
+      timeoutId = window.setTimeout(() => requestController.abort(), this.constructor.REQUEST_TIMEOUT_MS)
+      this.setStatusBadge("active", "Calling API")
 
       if (this.importedContext) {
         body.imported_context = {
@@ -77,15 +115,18 @@ export default class extends Controller {
           "Content-Type": "application/json",
           "X-CSRF-Token": this.csrfToken
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal: requestController.signal
       })
 
       const data = await response.json()
+      this.setStatusBadge("active", "Processing response")
 
       if (response.ok) {
         const reply = data.response || data.result || "No response received"
         this.addMessage("assistant", reply)
         this.history.push({ role: "assistant", content: reply })
+        if (this.hasModelDisplayTarget) this.modelDisplayTarget.textContent = data.model || "Unknown"
 
         if (data.evidence?.length > 0) {
           this.showEvidence(data.evidence)
@@ -96,18 +137,35 @@ export default class extends Controller {
         this.showNoteEvidence(data.note_evidence || [])
         this.literatureQueryTarget.textContent = data.literature_query || "PubMed query generated automatically from the latest review question."
 
-        this.renderTrace(data.trace || [])
+        this.renderTrace(data.trace || [], data.thinking || null)
+        const finalTrace = (data.trace || []).at(-1)
+        this.setStatusBadge("success", finalTrace?.title ? `Done: ${finalTrace.title}` : "Completed")
       } else {
+        const errorMessage = data.error || "The clinical review request did not complete successfully."
         this.renderTrace([
           {
             title: "Clinical review failed",
-            detail: data.error || "The clinical review request did not complete successfully.",
+            detail: errorMessage,
             status: "error"
           }
         ])
-        this.addMessage("error", data.error || "Request failed")
+        this.addMessage("error", errorMessage)
+        this.setStatusBadge("error", this.buildFailureBadge(response.status, errorMessage))
       }
     } catch (error) {
+      if (error?.name === "AbortError") {
+        this.renderTrace([
+          {
+            title: "Clinical review timed out",
+            detail: "The request took too long and was canceled. Try again, shorten the prompt, or retry in a minute.",
+            status: "error"
+          }
+        ])
+        this.addMessage("error", "Clinical review timed out after 70 seconds. Please try again.")
+        this.setStatusBadge("error", "Timed out after 70s")
+        return
+      }
+
       this.renderTrace([
         {
           title: "Network error",
@@ -116,7 +174,9 @@ export default class extends Controller {
         }
       ])
       this.addMessage("error", `Network error: ${error.message}`)
+      this.setStatusBadge("error", this.buildFailureBadge("NET", error.message))
     } finally {
+      if (timeoutId) window.clearTimeout(timeoutId)
       this.stopTracePlayback()
       this.setLoading(false)
       this.submitBtnTarget.disabled = false
@@ -125,9 +185,17 @@ export default class extends Controller {
   }
 
   addMessage(role, content) {
+    if (!this.hasMessagesTarget) {
+      console.error("[ClinicalReview] messagesTarget not found!", {
+        controllerConnected: this.element?.isConnected,
+        foundViaQuery: !!this.element?.querySelector('[data-clinical-review-target~="messages"]')
+      })
+      return
+    }
+
     // Remove placeholder if present
     const placeholder = this.messagesTarget.querySelector(".text-gray-600")
-    if (placeholder) placeholder.parentElement?.remove()
+    if (placeholder) placeholder.remove()
 
     const wrapper = document.createElement("div")
     wrapper.className = "flex gap-3"
@@ -154,6 +222,7 @@ export default class extends Controller {
   }
 
   showEvidence(evidence) {
+    if (!this.hasEvidencePanelTarget) return
     if (!evidence.length) {
       this.evidencePanelTarget.innerHTML = `<p class="text-xs text-gray-500">No PubMed evidence snippets were retrieved for the latest question.</p>`
       return
@@ -175,6 +244,7 @@ export default class extends Controller {
   }
 
   showNoteEvidence(evidence) {
+    if (!this.hasNoteEvidencePanelTarget) return
     if (!evidence.length) {
       this.noteEvidencePanelTarget.innerHTML = `<p class="text-xs text-gray-500">No indexed note evidence passages were retrieved for the latest question.</p>`
       return
@@ -190,21 +260,25 @@ export default class extends Controller {
 
   clearHistory() {
     this.history = []
-    this.messagesTarget.innerHTML = `
-      <div class="flex items-center justify-center h-full text-gray-600 text-sm">
-        <p class="text-center">
-          Start a clinical consultation.<br>
-          <span class="text-xs">Ask questions about clinical scenarios, differential diagnoses, or treatment plans.</span>
-        </p>
-      </div>`
-    this.evidencePanelTarget.innerHTML = ""
-    this.noteEvidencePanelTarget.innerHTML = ""
-    this.literatureQueryTarget.textContent = "PubMed query generated automatically from the latest review question."
+    if (this.hasMessagesTarget) {
+      this.messagesTarget.innerHTML = `
+        <div class="flex items-center justify-center h-full text-gray-600 text-sm">
+          <p class="text-center">
+            Start a clinical consultation.<br>
+            <span class="text-xs">Ask questions about clinical scenarios, differential diagnoses, or treatment plans.</span>
+          </p>
+        </div>`
+    }
+    if (this.hasEvidencePanelTarget) this.evidencePanelTarget.innerHTML = ""
+    if (this.hasNoteEvidencePanelTarget) this.noteEvidencePanelTarget.innerHTML = ""
+    this.resetIdleUiState()
+    if (this.hasLiteratureQueryTarget) this.literatureQueryTarget.textContent = "PubMed query generated automatically from the latest review question."
     this.renderTrace([])
     this.updateCount()
   }
 
   updateCount() {
+    if (!this.hasMessageCountTarget) return
     const userMessages = this.history.filter(m => m.role === "user").length
     this.messageCountTarget.textContent = userMessages
   }
@@ -220,48 +294,123 @@ export default class extends Controller {
     this.importPanelTarget.classList.remove("hidden")
     this.importSourceTarget.textContent = this.previewText(payload.sourceText, 420)
     this.importAnalysisTarget.textContent = this.previewText(payload.analysis, 420)
-    this.renderTrace(payload.trace || [])
+    this.renderTrace([])
     this.renderSuggestions()
   }
 
   resetPanel() {
     this.stopTracePlayback()
-    this.setLoading(false)
+    this.resetIdleUiState()
     this.importedContext = null
     this.importPanelTarget.classList.add("hidden")
     this.importSourceTarget.textContent = ""
     this.importAnalysisTarget.textContent = ""
     this.inputTarget.value = ""
     this.clearHistory()
+    this.setStatusBadge("idle", "Idle")
     this.renderSuggestions()
   }
 
+  resetIdleUiState() {
+    this.allowSubmit = false
+    if (this.hasSubmitBtnTarget) this.submitBtnTarget.disabled = false
+    if (this.hasSubmitSpinnerTarget) {
+      this.submitSpinnerTarget.classList.add("hidden")
+      this.submitSpinnerTarget.style.display = "none"
+    }
+    if (this.hasActivityIndicatorTarget) {
+      this.activityIndicatorTarget.classList.add("hidden")
+      this.activityIndicatorTarget.style.display = "none"
+    }
+    if (this.hasSubmitTextTarget) this.submitTextTarget.textContent = "Run Clinical Review"
+  }
+
+  setStatusBadge(status, label) {
+    if (!this.hasStatusBadgeTarget) return
+    console.debug(`[ClinicalReview] badge: ${status} → ${label}`)
+
+    const badge = this.statusBadgeTarget
+    const tone = this.statusTone(status)
+    badge.className = `rounded-full border px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide ${tone}`
+    badge.textContent = label
+  }
+
+  statusTone(status) {
+    switch (status) {
+      case "active":
+        return "border-blue-500/30 bg-blue-500/10 text-blue-200"
+      case "success":
+        return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+      case "error":
+        return "border-red-500/30 bg-red-500/10 text-red-200"
+      default:
+        return "border-gray-700 bg-gray-800 text-gray-300"
+    }
+  }
+
+  buildFailureBadge(code, message) {
+    const compactCode = String(code || "ERR").toUpperCase()
+    const summary = this.compactLabel(message)
+    return summary ? `Failed ${compactCode}: ${summary}` : `Failed ${compactCode}`
+  }
+
+  compactLabel(message, maxLength = 26) {
+    const normalized = (message || "").replace(/\s+/g, " ").trim()
+    if (!normalized) return ""
+    if (normalized.length <= maxLength) return normalized
+    return `${normalized.slice(0, maxLength - 1)}…`
+  }
+
   setLoading(loading) {
-    this.submitBtnTarget.disabled = loading
-    this.submitSpinnerTarget.classList.toggle("hidden", !loading)
-    this.activityIndicatorTarget.classList.toggle("hidden", !loading)
-    this.submitTextTarget.textContent = loading ? "Reviewing..." : "Run Clinical Review"
+    if (this.hasSubmitBtnTarget) this.submitBtnTarget.disabled = loading
+    if (this.hasSubmitSpinnerTarget) {
+      this.submitSpinnerTarget.classList.toggle("hidden", !loading)
+      this.submitSpinnerTarget.style.display = loading ? "" : "none"
+    }
+    if (this.hasActivityIndicatorTarget) {
+      this.activityIndicatorTarget.classList.toggle("hidden", !loading)
+      this.activityIndicatorTarget.style.display = loading ? "flex" : "none"
+    }
+    if (this.hasSubmitTextTarget) this.submitTextTarget.textContent = loading ? "Reviewing..." : "Run Clinical Review"
   }
 
   useSuggestion(event) {
+    event.preventDefault()
+    event.stopPropagation()
+    console.debug("[ClinicalReview] useSuggestion: prefill only")
+
     const prompt = event.params.prompt
     if (!prompt) return
 
+    this.stopTracePlayback()
+    this.renderTrace([])
+    this.setLoading(false)
+    this.allowSubmit = false
+    this.submitBtnTarget.disabled = false
+    this.submitSpinnerTarget.classList.add("hidden")
+    this.activityIndicatorTarget.classList.add("hidden")
+    this.submitTextTarget.textContent = "Run Clinical Review"
     this.inputTarget.value = prompt
-    this.inputTarget.focus()
-    this.submit()
+    this.setStatusBadge("idle", "Ready: click Run")
   }
 
   renderSuggestions() {
+    if (!this.importedContext) {
+      this.suggestionsSectionTarget.classList.add("hidden")
+      this.suggestionsTarget.innerHTML = ""
+      return
+    }
+
+    this.suggestionsSectionTarget.classList.remove("hidden")
     const suggestions = this.suggestionSet()
-    const title = this.importedContext ? "Suggested questions based on the imported case" : "Suggested questions to explore the value of Clinical Review"
+    const title = "Suggested questions based on the imported case"
     this.suggestionsTitleTarget.textContent = title
     this.suggestionsTarget.innerHTML = suggestions.map(suggestion => `
       <button
         type="button"
         data-action="click->clinical-review#useSuggestion"
         data-clinical-review-prompt-param="${this.escapeAttribute(suggestion.prompt)}"
-        class="rounded-full border border-gray-700 bg-gray-800/80 px-3 py-2 text-left text-sm text-gray-200 transition-colors hover:border-blue-500/40 hover:bg-blue-500/10 hover:text-blue-100">
+        class="cursor-pointer rounded-full border border-gray-700 bg-gray-800/80 px-3 py-2 text-left text-sm text-gray-200 transition duration-150 hover:border-blue-500/40 hover:bg-blue-500/10 hover:text-blue-100 active:scale-[0.98] active:border-blue-400/60">
         ${this.escapeHtml(suggestion.label)}
       </button>
     `).join("")
@@ -339,33 +488,33 @@ export default class extends Controller {
       return suggestions.filter((suggestion, index, array) => array.findIndex(item => item.label === suggestion.label) === index).slice(0, 6)
     }
 
-    return [
-      {
-        label: "What is this panel useful for?",
-        prompt: "Explain what Clinical Review does and how it differs from a simple summary tool, in plain English for a non-clinician."
-      },
-      {
-        label: "Show a clinician-style review",
-        prompt: "Demonstrate a structured clinician-style review of a case, including trends, concerns, missing data, and possible next considerations."
-      },
-      {
-        label: "Explain the value of evidence synthesis",
-        prompt: "Explain why combining a source note, prior analysis, and optional PubMed evidence can be useful in a clinical review workflow."
-      },
-      {
-        label: "What should a non-clinician notice?",
-        prompt: "If a non-clinician were evaluating a clinical AI portfolio demo, what signals would show that this panel is genuinely useful and responsibly designed?"
-      }
-    ]
+    return []
   }
 
-  renderTrace(trace) {
-    if (!trace.length) {
-      this.traceContentTarget.innerHTML = `<p class="text-sm text-gray-500">Start a consultation to view the processing trace. This panel shows workflow and retrieval steps only, not hidden model reasoning.</p>`
+  renderTrace(trace, thinking = null) {
+    if (!this.hasTraceContentTarget) return
+    let html = ""
+
+    if (thinking) {
+      html += `
+        <details open class="rounded-lg border border-purple-500/30 bg-purple-500/10 p-3">
+          <summary class="cursor-pointer text-sm font-semibold text-purple-200 flex items-center gap-2">
+            <span class="inline-block h-2.5 w-2.5 rounded-full bg-purple-400"></span>
+            AI Reasoning
+          </summary>
+          <div class="mt-2 text-sm text-purple-100/80 whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto">
+            ${this.formatMessage(thinking)}
+          </div>
+        </details>
+      `
+    }
+
+    if (!trace.length && !thinking) {
+      this.traceContentTarget.innerHTML = `<p class="text-sm text-gray-500">Run a consultation to view the AI's reasoning process and workflow steps here.</p>`
       return
     }
 
-    this.traceContentTarget.innerHTML = trace.map(step => `
+    html += trace.map(step => `
       <div class="rounded-lg border ${this.traceTone(step.status).border} ${this.traceTone(step.status).bg} p-3">
         <div class="flex items-center gap-2">
           <span class="inline-block h-2.5 w-2.5 rounded-full ${this.traceTone(step.status).dot}"></span>
@@ -374,6 +523,8 @@ export default class extends Controller {
         <p class="mt-1 text-sm ${this.traceTone(step.status).detail}">${this.escapeHtml(step.detail || "")}</p>
       </div>
     `).join("")
+
+    this.traceContentTarget.innerHTML = html
   }
 
   startTracePlayback(steps) {

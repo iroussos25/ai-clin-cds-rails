@@ -1,5 +1,5 @@
 class PubmedService
-  TIMEOUT_SECONDS = 25
+  TIMEOUT_SECONDS = 12
   EUTILS_BASE = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 
   TOPIC_PATTERNS = [
@@ -145,5 +145,7 @@ class PubmedService
     raise PubmedError, "PubMed request failed (#{response.code})" unless response.is_a?(Net::HTTPSuccess)
 
     response.body
+  rescue Net::OpenTimeout, Net::ReadTimeout, SocketError => e
+    raise PubmedError, "PubMed request timed out: #{e.message}"
   end
 end

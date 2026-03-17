@@ -98,16 +98,25 @@ Plan: IV furosemide 40mg bolus then gtt, strict I/O, daily weights, cardiology c
     try {
       const body = { text, use_rag: !this.disableRagToggleTarget.checked }
 
-      const response = await fetch("/api/analyze", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": this.csrfToken
-        },
-        body: JSON.stringify(body)
-      })
+      let response, data
+      for (let attempt = 0; attempt < 2; attempt++) {
+        response = await fetch("/api/analyze", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": this.csrfToken
+          },
+          body: JSON.stringify(body)
+        })
 
-      const data = await response.json()
+        data = await response.json()
+
+        if (response.ok || response.status < 500) break
+        if (attempt === 0) {
+          console.debug("[Analyze] Server error, retrying...")
+          await new Promise(r => setTimeout(r, 1500))
+        }
+      }
 
       if (response.ok) {
         const analysis = data.analysis || data.result

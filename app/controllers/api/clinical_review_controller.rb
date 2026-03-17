@@ -33,7 +33,7 @@ module Api
       started_at = Time.current
 
       messages = Array(params[:messages])
-      imported_context = params[:imported_context].to_h
+      imported_context = params[:imported_context]&.permit(:source_text, :analysis, :model)&.to_h || {}
       imported_source_text = sanitize_input(imported_context[:source_text] || imported_context["source_text"])
       imported_analysis = sanitize_input(imported_context[:analysis] || imported_context["analysis"])
       imported_model = sanitize_input(imported_context[:model] || imported_context["model"])
@@ -156,9 +156,16 @@ module Api
         detail: "Generated clinical review response using #{result.model}."
       }
 
+      if result.thinking.present?
+        trace << {
+          title: "AI reasoning captured",
+          detail: "The model's internal reasoning chain is shown in the thinking panel above."
+        }
+      end
+
       response.headers["X-Model-Used"] = result.model
       audit(route: "/api/clinical-review", status: 200, started_at: started_at, model_used: result.model)
-      render_ok({ response: result.text, model: result.model, evidence: evidence, note_evidence: note_evidence, literature_query: literature_query, trace: trace })
+      render_ok({ response: result.text, model: result.model, thinking: result.thinking.presence, evidence: evidence, note_evidence: note_evidence, literature_query: literature_query, trace: trace })
 
     rescue GoogleTextService::GenerationError => e
       audit(route: "/api/clinical-review", status: 500, started_at: started_at, error: e.message)

@@ -1,3 +1,6 @@
+require "net/http"
+require "cgi"
+
 class EmbeddingService
   ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent"
   DIMENSION = 768

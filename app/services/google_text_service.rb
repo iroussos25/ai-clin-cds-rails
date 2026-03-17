@@ -13,9 +13,11 @@ class GoogleTextService
   ].freeze
 
   TIMEOUT_SECONDS = 45
+  MAX_TOTAL_SECONDS = 90
+  MAX_TIMEOUT_RETRIES = 1
   API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
-  Result = Data.define(:text, :model)
+  Result = Data.define(:text, :model, :thinking)
 
   class GenerationError < StandardError; end
 
@@ -26,30 +28,51 @@ class GoogleTextService
 
   def generate(system:, messages:)
     last_error = "Google text generation failed"
+    timeout_count = 0
+    started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
     FALLBACK_MODELS.each do |model|
+      break if elapsed_generation_seconds(started_at) >= MAX_TOTAL_SECONDS
+
       request_modes = supports_system_instruction?(model) ? [true, false] : [false]
 
       request_modes.each do |use_system_instruction|
+        break if elapsed_generation_seconds(started_at) >= MAX_TOTAL_SECONDS
+
         response = call_model(model, system, messages, use_system_instruction)
 
         case response
         in { error: String => msg, status: 400, developer_instruction_issue: true } if use_system_instruction
           next
-        in { error: String => msg, status: 408 | 429 | 503 }
+        in { error: String => msg, status: 408 }
+          timeout_count += 1
+          last_error = msg
+          if timeout_count >= MAX_TIMEOUT_RETRIES
+            raise GenerationError, "Model request timed out. Please retry with a shorter prompt or try again in a moment."
+          end
+          break
+        in { error: String => msg, status: 429 | 503 }
           last_error = msg
           break
         in { error: String => msg }
           raise GenerationError, msg
-        in { text: String => text, model: String => used_model } if text.present?
-          return Result.new(text: text, model: used_model)
+        in { text: String => text, model: String => used_model, thinking: String => thinking } if text.present?
+          return Result.new(text: text, model: used_model, thinking: thinking)
         in { text: String }
           last_error = "Model #{model} returned no visible content."
         end
       end
     end
 
+    if elapsed_generation_seconds(started_at) >= MAX_TOTAL_SECONDS
+      raise GenerationError, "Clinical review generation exceeded the time limit. Please retry."
+    end
+
     raise GenerationError, last_error
+  end
+
+  def elapsed_generation_seconds(started_at)
+    Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
   end
 
   private
@@ -58,9 +81,13 @@ class GoogleTextService
     !model.start_with?("gemma-")
   end
 
+  def supports_thinking?(model)
+    model.start_with?("gemini-2.5")
+  end
+
   def call_model(model, system, messages, use_system_instruction)
     url = "#{API_BASE}/#{model}:generateContent?key=#{CGI.escape(@api_key)}"
-    body = build_request_body(system, messages, use_system_instruction)
+    body = build_request_body(system, messages, use_system_instruction, model: model)
 
     uri = URI.parse(url)
     http = Net::HTTP.new(uri.host, uri.port)
@@ -82,13 +109,13 @@ class GoogleTextService
       return { error: error_msg, status: response.code.to_i, developer_instruction_issue: developer_issue }
     end
 
-    text = extract_text(data)
-    { text: text, model: model }
+    extracted = extract_response(data)
+    { text: extracted[:text], model: model, thinking: extracted[:thinking] }
   rescue Net::OpenTimeout, Net::ReadTimeout
     { error: "Model #{model} timed out", status: 408 }
   end
 
-  def build_request_body(system, messages, use_system_instruction)
+  def build_request_body(system, messages, use_system_instruction, model: nil)
     contents = messages.map do |msg|
       {
         role: msg[:role] == "assistant" ? "model" : "user",
@@ -96,7 +123,7 @@ class GoogleTextService
       }
     end
 
-    if use_system_instruction
+    body = if use_system_instruction
       {
         systemInstruction: { parts: [{ text: system }] },
         contents: contents
@@ -108,14 +135,21 @@ class GoogleTextService
       }
       { contents: [inline_system, *contents] }
     end
+
+    if model && supports_thinking?(model)
+      body[:generationConfig] = { thinkingConfig: { thinkingBudget: 4096 } }
+    end
+
+    body
   end
 
-  def extract_text(data)
+  def extract_response(data)
     candidates = data["candidates"] || []
-    candidates
-      .flat_map { |c| c.dig("content", "parts") || [] }
-      .map { |p| p["text"].to_s }
-      .join("")
-      .strip
+    parts = candidates.flat_map { |c| c.dig("content", "parts") || [] }
+
+    thinking = parts.select { |p| p["thought"] == true }.map { |p| p["text"].to_s }.join("\n").strip
+    text = parts.reject { |p| p["thought"] == true }.map { |p| p["text"].to_s }.join("").strip
+
+    { text: text, thinking: thinking }
   end
 end
