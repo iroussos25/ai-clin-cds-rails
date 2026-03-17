@@ -118,7 +118,10 @@
       <%# RAG Context Panel (shown when RAG is active) %>
       <div data-analyze-target="ragPanel" class="hidden bg-gray-900 rounded-xl border border-gray-800 p-4">
         <h3 class="text-sm font-semibold text-gray-300 mb-1">Evidence and Citations</h3>
-        <p class="text-xs text-gray-500 mb-3">Inline citations in the analysis map to these indexed note references.</p>
+        <p class="text-xs text-gray-500 mb-2">Inline citations in the analysis map to these indexed note references.</p>
+        <div class="mb-3 rounded-lg border border-gray-800 bg-gray-800/60 px-3 py-2 text-[11px] text-gray-400">
+          <p><span class="font-semibold text-gray-200">Citation legend:</span> <span class="text-cyan-300">[NOTE]</span> = the original note you pasted, <span class="text-cyan-300">[NOTE-CHUNK-1]</span>, <span class="text-cyan-300">[NOTE-CHUNK-2]</span>, etc. = retrieved indexed passages shown below.</p>
+        </div>
         <div data-analyze-target="ragResults" class="space-y-2 text-sm text-gray-400"></div>
       </div>
 

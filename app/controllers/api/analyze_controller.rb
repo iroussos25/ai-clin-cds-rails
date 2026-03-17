@@ -10,7 +10,7 @@ module Api
       4. Do not speculate, infer beyond what is written, or provide differential diagnoses unless they are explicitly mentioned in the context.
       5. Maintain a professional, concise tone appropriate for clinical data review.
       6. If the context contains ambiguous or potentially conflicting information, flag it explicitly rather than choosing one interpretation silently.
-      7. Every clinically meaningful conclusion must end with an inline citation using [N0] for the supplied note and [R1], [R2], etc. for retrieved indexed passages when relevant.
+      7. Every clinically meaningful conclusion must end with an inline citation using [NOTE] for the supplied note and [NOTE-CHUNK-1], [NOTE-CHUNK-2], etc. for retrieved indexed passages when relevant.
       8. Add a short ## References section at the end listing only the reference ids you actually cited.
     PROMPT
 
@@ -39,7 +39,7 @@ module Api
           query_embedding = EmbeddingService.new.embed(text)
           rag_matches = DocumentChunk.match(query_embedding, match_count: 3)
           rag_context = rag_matches.map.with_index do |chunk, index|
-            "[R#{index + 1}] doc #{chunk[:doc_id]} | chunk #{chunk[:chunk_index]} | score #{format("%.3f", chunk[:similarity])}\n#{chunk[:content]}"
+            "[NOTE-CHUNK-#{index + 1}] doc #{chunk[:doc_id]} | chunk #{chunk[:chunk_index]} | score #{format("%.3f", chunk[:similarity])}\n#{chunk[:content]}"
           end.join("\n\n") if rag_matches.any?
           trace << {
             title: "RAG retrieval",
@@ -59,7 +59,7 @@ module Api
         }
       end
 
-      prompt_content = "<clinical_document_context>\n[N0] Supplied clinical note\n#{text}\n</clinical_document_context>"
+      prompt_content = "<clinical_document_context>\n[NOTE] Supplied clinical note\n#{text}\n</clinical_document_context>"
       prompt_content += "\n\n<rag_context>\n#{rag_context}\n</rag_context>" if rag_context.present?
       prompt_content += "\n\nAnalyze this clinical document thoroughly."
 
@@ -82,7 +82,7 @@ module Api
         trace: trace,
         evidence: rag_matches.map.with_index do |chunk, index|
           {
-            id: "R#{index + 1}",
+            id: "NOTE-CHUNK-#{index + 1}",
             content: chunk[:content],
             similarity: chunk[:similarity],
             chunk_index: chunk[:chunk_index],

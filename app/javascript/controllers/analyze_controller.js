@@ -307,7 +307,8 @@ Plan: IV furosemide 40mg bolus then gtt, strict I/O, daily weights, cardiology c
 
   renderMarkdown(text) {
     if (!text) return ""
-    return text
+    const normalizedText = this.normalizeCitationMarkers(text)
+    return normalizedText
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
       .replace(/\*(.*?)\*/g, "<em>$1</em>")
@@ -316,6 +317,12 @@ Plan: IV furosemide 40mg bolus then gtt, strict I/O, daily weights, cardiology c
       .replace(/^- (.+)$/gm, '<li class="ml-4">$1</li>')
       .replace(/\n\n/g, "</p><p class='mt-2'>")
       .replace(/\n/g, "<br>")
+  }
+
+  normalizeCitationMarkers(text) {
+    return (text || "")
+      .replace(/\[N0\]/g, "[NOTE]")
+      .replace(/\[R(\d+)\]/g, "[NOTE-CHUNK-$1]")
   }
 
   escapeHtml(text) {
