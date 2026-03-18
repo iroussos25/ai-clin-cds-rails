@@ -1,41 +1,40 @@
-# 🏥 Clinical Decision Support (CDS) | AI Context Engine
+# 🏥 Clinical Decision Support (CDS) | Rails 8 AI Engine
 
-**An "Operational Grounding" approach to AI-assisted Triage.** Built by a former **ICU/ER Nurse (Kaiser Alum)** and **Special Forces Platoon Leader** transitioning into Software Engineering. This isn't a chatbot; it's a persistent, stateful clinical memory engine built for the high-pressure reality of the clinical floor.
+A high-performance system designed to ingest raw clinical data and provide stateful, AI-augmented triage summaries. Built to solve the "Time-to-Insight" problem in high-pressure environments (ICU/ER).
 
-## ⚡ Live Demo & Architecture
-* **Live Application:** [https://ai-clin-cds-rails.fly.dev/](https://ai-clin-cds-rails.fly.dev/)
-* **Primary Stack:** Rails 8, PostgreSQL (JSONB), Tailwind CSS, OpenAI API.
-* **Infrastructure:** Deployed on **Fly.io** using **Kamal** and **GitHub Actions** for CI/CD.
-
----
-
-## 🏗️ The Problem: "Data Graveyards" vs. "Time-to-Insight"
-In environments like the ICU or high-volume care teams (like **Pair Team**), Electronic Health Records (EHRs) are often data-heavy but insight-poor. Clinicians lose critical minutes digging through tabs to build a mental model of a patient.
-
-**The Solution:** This engine ingests raw clinical data and orchestrates AI agents to maintain a persistent "Clinical Context Window," providing real-time, actionable triage summaries and severity scoring.
+### 🚀 Live Links
+* **Live App:** [https://ai-clin-cds-rails.fly.dev/](https://ai-clin-cds-rails.fly.dev/)
+* **Portfolio:** [www.giannisroussos.com](http://www.giannisroussos.com)
+* **GitHub:** [https://github.com/iroussos25/ai-clin-cds-rails](https://github.com/iroussos25/ai-clin-cds-rails)
 
 ---
 
-## 🛠️ Engineering for "Mission Intensity"
+## 🛠️ The Stack & Architecture
 
-### 1. Rails 8 / Modern Asset Pipeline
-Migrated from a Next.js/Node stack to **Rails 8** in <48 hours to leverage the "One-Person Framework" philosophy. Used **Propshaft** and **Tailwind** for a high-density, terminal-inspired UI that mimics professional clinical monitors.
+* **Backend:** Ruby on Rails 8.0.1
+* **Database:** PostgreSQL (utilizing `jsonb` for flexible clinical vitals)
+* **Frontend:** Tailwind CSS / Hotwire (Turbo & Stimulus)
+* **AI Orchestration:** OpenAI API via decoupled Service Objects
+* **Deployment:** Fly.io via Kamal & GitHub Actions (CI/CD)
 
-### 2. Service Object Pattern (AI Orchestration)
-OpenAI integration is decoupled into a dedicated `ClinicalAIAgent` service. This ensures the core business logic is LLM-agnostic and maintains a clean separation of concerns between the controller and the AI's "thought process."
-
-### 3. Stateful Persistence (ActiveRecord)
-Unlike ephemeral chat interfaces, this system uses **PostgreSQL** to maintain a durable history of patient vitals and AI-generated assessments. This provides a "Clinical Memory" that is auditable and consistent across shifts.
-
-### 4. Hardened CI/CD
-Configured a robust **GitHub Actions** pipeline to handle automated testing and deployment to the Fly.io edge. Every commit is production-ready, reflecting a "No-BS" approach to software reliability.
+### Key Technical Decisions
+1. **The Move to Rails 8:** Migrated from a Next.js/Node stack to Rails 8 in under 48 hours. Used the "One-Person Framework" philosophy to consolidate Auth, DB management, and Asset pipelines.
+2. **Data Persistence:** Unlike ephemeral LLM chat apps, this uses **ActiveRecord** to maintain a durable clinical history for every patient.
+3. **Service Object Pattern:** AI logic is isolated in `app/services/clinical_ai_agent.rb`. This decouples the "thinking" from the controllers, making the app provider-agnostic and easier to test.
+4. **CI/CD Pipeline:** Automated testing and deployment via GitHub Actions. Every push to `main` is validated and deployed to the Fly.io edge.
 
 ---
 
-## 🪖 About the Builder: Giannis Roussos
-I don't build "toys." I build tools that survive contact with reality.
-* **Clinical:** 10 years as an ICU/ER Nurse (Kaiser Permanente).
-* **Operational:** Platoon Leader, Greek Special Forces (Paratroopers).
-* **Technical:** Full-stack builder specializing in AI orchestration (React, Next.js, Node, Rails 8, AWS).
+## 🏗️ Local Development
 
-*“
+### Prerequisites
+* Ruby 3.2+
+* PostgreSQL
+* Redis (for Rails 8 Solid Cache/Queue)
+* OpenAI API Key
+
+### Setup Instructions
+1. **Clone the repo:**
+   ```bash
+   git clone [https://github.com/iroussos25/ai-clin-cds-rails.git](https://github.com/iroussos25/ai-clin-cds-rails.git)
+   cd ai-clin-cds-rails
