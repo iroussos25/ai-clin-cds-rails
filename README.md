@@ -1,64 +1,41 @@
-# AI Clinical CDS Rails
+# 🏥 Clinical Decision Support (CDS) | AI Context Engine
 
-Rails 8 application for AI-assisted clinical decision support workflows.
+**An "Operational Grounding" approach to AI-assisted Triage.** Built by a former **ICU/ER Nurse (Kaiser Alum)** and **Special Forces Platoon Leader** transitioning into Software Engineering. This isn't a chatbot; it's a persistent, stateful clinical memory engine built for the high-pressure reality of the clinical floor.
 
-## Local Setup
+## ⚡ Live Demo & Architecture
+* **Live Application:** [https://ai-clin-cds-rails.fly.dev/](https://ai-clin-cds-rails.fly.dev/)
+* **Primary Stack:** Rails 8, PostgreSQL (JSONB), Tailwind CSS, OpenAI API.
+* **Infrastructure:** Deployed on **Fly.io** using **Kamal** and **GitHub Actions** for CI/CD.
 
-1. Install Ruby `3.2.10` and bundle dependencies.
-2. Configure a Postgres connection for development via either:
-	- `DATABASE_URL`, or
-	- `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`.
-3. Run:
+---
 
-```powershell
-bundle install
-bundle exec rails db:prepare
-bundle exec rails tailwindcss:build
-bundle exec rails server
-```
+## 🏗️ The Problem: "Data Graveyards" vs. "Time-to-Insight"
+In environments like the ICU or high-volume care teams (like **Pair Team**), Electronic Health Records (EHRs) are often data-heavy but insight-poor. Clinicians lose critical minutes digging through tabs to build a mental model of a patient.
 
-If startup says a server is already running, clear stale processes/PID:
+**The Solution:** This engine ingests raw clinical data and orchestrates AI agents to maintain a persistent "Clinical Context Window," providing real-time, actionable triage summaries and severity scoring.
 
-```powershell
-Get-Process ruby -ErrorAction SilentlyContinue | Stop-Process -Force
-Remove-Item tmp\pids\server.pid -ErrorAction SilentlyContinue
-bundle exec rails server
-```
+---
 
-## Testing
+## 🛠️ Engineering for "Mission Intensity"
 
-This project uses Rails' built-in Minitest.
+### 1. Rails 8 / Modern Asset Pipeline
+Migrated from a Next.js/Node stack to **Rails 8** in <48 hours to leverage the "One-Person Framework" philosophy. Used **Propshaft** and **Tailwind** for a high-density, terminal-inspired UI that mimics professional clinical monitors.
 
-Run the suite locally:
+### 2. Service Object Pattern (AI Orchestration)
+OpenAI integration is decoupled into a dedicated `ClinicalAIAgent` service. This ensures the core business logic is LLM-agnostic and maintains a clean separation of concerns between the controller and the AI's "thought process."
 
-```powershell
-set DATABASE_HOST=localhost
-set DATABASE_PORT=5432
-set DATABASE_USERNAME=postgres
-set DATABASE_PASSWORD=your_password_here
-bundle exec rails test
-```
+### 3. Stateful Persistence (ActiveRecord)
+Unlike ephemeral chat interfaces, this system uses **PostgreSQL** to maintain a durable history of patient vitals and AI-generated assessments. This provides a "Clinical Memory" that is auditable and consistent across shifts.
 
-Run a specific file:
+### 4. Hardened CI/CD
+Configured a robust **GitHub Actions** pipeline to handle automated testing and deployment to the Fly.io edge. Every commit is production-ready, reflecting a "No-BS" approach to software reliability.
 
-```powershell
-bundle exec rails test test/services/metrics_service_test.rb
-```
+---
 
-## Benchmarks Dashboard + CI Status
+## 🪖 About the Builder: Giannis Roussos
+I don't build "toys." I build tools that survive contact with reality.
+* **Clinical:** 10 years as an ICU/ER Nurse (Kaiser Permanente).
+* **Operational:** Platoon Leader, Greek Special Forces (Paratroopers).
+* **Technical:** Full-stack builder specializing in AI orchestration (React, Next.js, Node, Rails 8, AWS).
 
-The Benchmarks panel has two concerns:
-
-- Test Suite: runtime AI benchmark scenarios (latency/cost/consistency)
-- Ops Metrics: live API telemetry plus CI status from GitHub Actions
-
-To enable CI status in the dashboard, set:
-
-- `GITHUB_REPOSITORY` (example: `owner/repo`)
-- Optional `GITHUB_TOKEN` for higher API rate limits/private repos
-
-## Deployment (Fly.io)
-
-Fly configuration is in `fly.toml`.
-
-Use the full runbook in `DEPLOY_FLY.md`.
+*“
