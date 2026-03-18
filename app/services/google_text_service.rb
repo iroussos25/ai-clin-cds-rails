@@ -22,7 +22,10 @@ class GoogleTextService
   class GenerationError < StandardError; end
 
   def initialize(api_key: nil)
-    @api_key = api_key || Rails.application.credentials.dig(:google, :api_key) || ENV["GOOGLE_GENERATIVE_AI_API_KEY"]
+    @api_key = api_key ||
+      Rails.application.credentials.dig(:google, :api_key) ||
+      ENV["GOOGLE_GENERATIVE_AI_API_KEY"] ||
+      ENV["GOOGLE_API_KEY"]
     raise GenerationError, "Missing Google AI API key" unless @api_key.present?
   end
 

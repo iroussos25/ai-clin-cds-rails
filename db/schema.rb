@@ -13,7 +13,6 @@
 ActiveRecord::Schema[8.1].define(version: 2026_03_16_200002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
-  enable_extension "vector"
 
   create_table "audit_logs", force: :cascade do |t|
     t.string "client_ip"
@@ -35,7 +34,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_16_200002) do
     t.text "content", null: false
     t.datetime "created_at", null: false
     t.string "doc_id", null: false
-    t.vector "embedding", limit: 768, null: false
+    t.jsonb "embedding", default: [], null: false
     t.jsonb "metadata", default: {}
     t.datetime "updated_at", null: false
     t.index ["doc_id"], name: "index_document_chunks_on_doc_id"
