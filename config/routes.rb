@@ -20,6 +20,7 @@ Rails.application.routes.draw do
     # Observability
     namespace :ops do
       get "metrics", to: "metrics#show"
+      get "ci_status", to: "ci_status#show"
     end
   end
 

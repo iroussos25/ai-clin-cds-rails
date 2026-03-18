@@ -11,7 +11,8 @@ export default class extends Controller {
     "resultsTable", "detailCards", "sortSelect",
     // Ops metrics
     "refreshBtn", "totalRequests", "avgLatency", "errorRate", "uptime",
-    "routeTable", "modelUsage"
+    "routeTable", "modelUsage",
+    "ciProvider", "ciConclusion", "ciBranch", "ciUpdatedAt", "ciRunLink", "ciMessage"
   ]
 
   connect() {
@@ -290,17 +291,56 @@ export default class extends Controller {
     }
 
     try {
-      const response = await fetch("/api/ops/metrics")
-      const data = await response.json()
-      if (response.ok) this._renderOpsMetrics(data)
+      const [metricsResp, ciResp] = await Promise.all([
+        fetch("/api/ops/metrics"),
+        fetch("/api/ops/ci_status")
+      ])
+
+      const metrics = await metricsResp.json()
+      const ciStatus = await ciResp.json()
+
+      if (metricsResp.ok) this._renderOpsMetrics(metrics)
+      this._renderCiStatus(ciStatus)
     } catch {
       // Metrics unavailable
+      this._renderCiStatus({ status: "unavailable", message: "Unable to load CI status" })
     } finally {
       if (this.hasRefreshBtnTarget) {
         this.refreshBtnTarget.disabled = false
         this.refreshBtnTarget.textContent = "Refresh Metrics"
       }
     }
+  }
+
+  _renderCiStatus(ciStatus) {
+    if (!ciStatus) return
+
+    if (this.hasCiProviderTarget) this.ciProviderTarget.textContent = ciStatus.provider || "GitHub Actions"
+
+    if (this.hasCiConclusionTarget) {
+      const conclusion = ciStatus.conclusion || ciStatus.status || "unknown"
+      this.ciConclusionTarget.textContent = conclusion
+      this.ciConclusionTarget.className = this._ciConclusionClass(conclusion)
+    }
+
+    if (this.hasCiBranchTarget) this.ciBranchTarget.textContent = ciStatus.branch || "—"
+    if (this.hasCiUpdatedAtTarget) this.ciUpdatedAtTarget.textContent = ciStatus.run_updated_at || "—"
+
+    if (this.hasCiRunLinkTarget) {
+      const hasLink = !!ciStatus.run_url
+      this.ciRunLinkTarget.classList.toggle("hidden", !hasLink)
+      this.ciRunLinkTarget.href = hasLink ? ciStatus.run_url : "#"
+    }
+
+    if (this.hasCiMessageTarget) this.ciMessageTarget.textContent = ciStatus.message || ""
+  }
+
+  _ciConclusionClass(conclusion) {
+    const value = (conclusion || "").toLowerCase()
+    if (value === "success") return "text-emerald-400 font-medium"
+    if (value === "failure" || value === "failed" || value === "cancelled") return "text-red-400 font-medium"
+    if (value === "in_progress" || value === "queued" || value === "waiting") return "text-amber-400 font-medium"
+    return "text-gray-400"
   }
 
   _renderOpsMetrics(data) {

@@ -25,6 +25,38 @@ Remove-Item tmp\pids\server.pid -ErrorAction SilentlyContinue
 bundle exec rails server
 ```
 
+## Testing
+
+This project uses Rails' built-in Minitest.
+
+Run the suite locally:
+
+```powershell
+set DATABASE_HOST=localhost
+set DATABASE_PORT=5432
+set DATABASE_USERNAME=postgres
+set DATABASE_PASSWORD=your_password_here
+bundle exec rails test
+```
+
+Run a specific file:
+
+```powershell
+bundle exec rails test test/services/metrics_service_test.rb
+```
+
+## Benchmarks Dashboard + CI Status
+
+The Benchmarks panel has two concerns:
+
+- Test Suite: runtime AI benchmark scenarios (latency/cost/consistency)
+- Ops Metrics: live API telemetry plus CI status from GitHub Actions
+
+To enable CI status in the dashboard, set:
+
+- `GITHUB_REPOSITORY` (example: `owner/repo`)
+- Optional `GITHUB_TOKEN` for higher API rate limits/private repos
+
 ## Deployment (Fly.io)
 
 Fly configuration is in `fly.toml`.

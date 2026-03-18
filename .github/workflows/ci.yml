@@ -72,8 +72,22 @@ jobs:
         run: bin/rubocop -f github
 
   test:
-    if: false
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: ai_clin_cds_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ai_clin_cds_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     # services:
     #  redis:
@@ -93,8 +107,10 @@ jobs:
       - name: Run tests
         env:
           RAILS_ENV: test
-          # RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
-          # REDIS_URL: redis://localhost:6379/0
+          DATABASE_HOST: localhost
+          DATABASE_PORT: 5432
+          DATABASE_USERNAME: postgres
+          DATABASE_PASSWORD: postgres
         run: bin/rails db:test:prepare test
 
   system-test:
