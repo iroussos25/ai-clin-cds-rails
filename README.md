@@ -1,64 +1,40 @@
-# AI Clinical CDS Rails
+# 🏥 Clinical Decision Support (CDS) | Rails 8 AI Engine
 
-Rails 8 application for AI-assisted clinical decision support workflows.
+A high-performance system designed to ingest raw clinical data and provide stateful, AI-augmented triage summaries. Built to solve the "Time-to-Insight" problem in high-pressure environments (ICU/ER).
 
-## Local Setup
+### 🚀 Live Links
+* **Live App:** [https://ai-clin-cds-rails.fly.dev/](https://ai-clin-cds-rails.fly.dev/)
+* **Portfolio:** [www.giannisroussos.com](http://www.giannisroussos.com)
+* **GitHub:** [https://github.com/iroussos25/ai-clin-cds-rails](https://github.com/iroussos25/ai-clin-cds-rails)
 
-1. Install Ruby `3.2.10` and bundle dependencies.
-2. Configure a Postgres connection for development via either:
-	- `DATABASE_URL`, or
-	- `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`.
-3. Run:
+---
 
-```powershell
-bundle install
-bundle exec rails db:prepare
-bundle exec rails tailwindcss:build
-bundle exec rails server
-```
+## 🛠️ The Stack & Architecture
 
-If startup says a server is already running, clear stale processes/PID:
+* **Backend:** Ruby on Rails 8.0.1
+* **Database:** PostgreSQL (utilizing `jsonb` for flexible clinical vitals)
+* **Frontend:** Tailwind CSS / Hotwire (Turbo & Stimulus)
+* **AI Orchestration:** OpenAI API via decoupled Service Objects
+* **Deployment:** Fly.io via Kamal & GitHub Actions (CI/CD)
 
-```powershell
-Get-Process ruby -ErrorAction SilentlyContinue | Stop-Process -Force
-Remove-Item tmp\pids\server.pid -ErrorAction SilentlyContinue
-bundle exec rails server
-```
+### Key Technical Decisions
+1. **The Move to Rails 8:** Migrated from a Next.js/Node stack to Rails 8 in under 48 hours. Used the "One-Person Framework" philosophy to consolidate Auth, DB management, and Asset pipelines.
+2. **Data Persistence:** Unlike ephemeral LLM chat apps, this uses **ActiveRecord** to maintain a durable clinical history for every patient.
+3. **Service Object Pattern:** AI logic is isolated in `app/services/clinical_ai_agent.rb`. This decouples the "thinking" from the controllers, making the app provider-agnostic and easier to test.
+4. **CI/CD Pipeline:** Automated testing and deployment via GitHub Actions. Every push to `main` is validated and deployed to the Fly.io edge.
 
-## Testing
+---
 
-This project uses Rails' built-in Minitest.
+## 🏗️ Local Development
 
-Run the suite locally:
+### Prerequisites
+* Ruby 3.2+
+* PostgreSQL
+* Redis (for Rails 8 Solid Cache/Queue)
+* OpenAI API Key
 
-```powershell
-set DATABASE_HOST=localhost
-set DATABASE_PORT=5432
-set DATABASE_USERNAME=postgres
-set DATABASE_PASSWORD=your_password_here
-bundle exec rails test
-```
-
-Run a specific file:
-
-```powershell
-bundle exec rails test test/services/metrics_service_test.rb
-```
-
-## Benchmarks Dashboard + CI Status
-
-The Benchmarks panel has two concerns:
-
-- Test Suite: runtime AI benchmark scenarios (latency/cost/consistency)
-- Ops Metrics: live API telemetry plus CI status from GitHub Actions
-
-To enable CI status in the dashboard, set:
-
-- `GITHUB_REPOSITORY` (example: `owner/repo`)
-- Optional `GITHUB_TOKEN` for higher API rate limits/private repos
-
-## Deployment (Fly.io)
-
-Fly configuration is in `fly.toml`.
-
-Use the full runbook in `DEPLOY_FLY.md`.
+### Setup Instructions
+1. **Clone the repo:**
+   ```bash
+   git clone [https://github.com/iroussos25/ai-clin-cds-rails.git](https://github.com/iroussos25/ai-clin-cds-rails.git)
+   cd ai-clin-cds-rails
