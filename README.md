@@ -1,3 +1,6 @@
+> 📊 **Note:** This repository is part of a **Comparative Engineering Study**. For the full performance benchmark, architectural breakdown, and deployment analysis, see the [Aegis Master Project](https://github.com/iroussos25/aegis-project).
+---
+
 # 🏥 Clinical Decision Support (CDS) | Rails 8 AI Engine
 
 A high-performance system designed to ingest raw clinical data and provide stateful, AI-augmented triage summaries. Built to solve the "Time-to-Insight" problem in high-pressure environments (ICU/ER).
