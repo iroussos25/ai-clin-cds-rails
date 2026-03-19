@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full">
   <head>
-    <title><%= content_for(:title) || "Clinical Context Analyst" %></title>
+    <title><%= content_for(:title) || "AEGIS" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="application-name" content="Clinical Context Analyst">
+    <meta name="application-name" content="AEGIS">
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚕️</text></svg>" type="image/svg+xml">
     <%= csrf_meta_tags %>
@@ -12,27 +12,40 @@
 
     <%= yield :head %>
 
+    <script>
+      (() => {
+        const savedTheme = localStorage.getItem("theme");
+        const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+        if (savedTheme === "dark" || (!savedTheme && prefersDark)) {
+          document.documentElement.classList.add("dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+        }
+      })();
+    </script>
+
     <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="h-full bg-gray-950 text-gray-100 antialiased">
+  <body class="h-full bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 antialiased transition-colors">
     <div class="flex h-full" data-controller="navigation">
       <%# Sidebar %>
-      <aside class="w-64 flex-shrink-0 bg-gray-900 border-r border-gray-800 flex flex-col">
-        <div class="p-4 border-b border-gray-800">
-          <h1 class="text-lg font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-            Clinical Context Analyst
+      <aside class="w-64 flex-shrink-0 bg-white border-r border-gray-200 dark:bg-gray-900 dark:border-gray-800 flex flex-col transition-colors">
+        <div class="p-4 border-b border-gray-200 dark:border-gray-800">
+          <h1 class="font-[Nunito] font-extrabold text-3xl md:text-4xl tracking-tight text-violet-700 dark:text-indigo-400">
+            AEGIS
           </h1>
-          <p class="text-xs text-gray-500 mt-1">AI-Powered Clinical Decision Support</p>
+          <p class="text-xs text-gray-600 dark:text-gray-500 mt-1">AI-Powered Clinical Decision Support</p>
         </div>
 
         <nav class="flex-1 p-3 space-y-1">
           <% %w[workbench clinical-review recruiter-kit fhir benchmarks].each do |panel| %>
             <button
               class="w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                     <%= panel == @active_panel ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200' %>"
+                <%= panel == @active_panel ? 'bg-blue-600/20 text-blue-500 border border-blue-500/30' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200' %>"
               data-action="click->navigation#switchPanel"
               data-navigation-panel-param="<%= panel %>"
               data-navigation-target="tab"
@@ -43,8 +56,8 @@
           <% end %>
         </nav>
 
-        <div class="p-3 border-t border-gray-800">
-          <div class="px-3 py-2 text-xs text-gray-600">
+        <div class="p-3 border-t border-gray-200 dark:border-gray-800">
+          <div class="px-3 py-2 text-xs text-gray-500 dark:text-gray-600">
             Rails <%= Rails.version %> &middot; Hotwire
           </div>
         </div>
@@ -52,6 +65,22 @@
 
       <%# Main Content %>
       <main class="flex-1 overflow-y-auto">
+        <button
+          type="button"
+          class="fixed top-4 right-4 z-50 inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white/90 px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm backdrop-blur transition hover:bg-white dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-200 dark:hover:bg-gray-900"
+          data-controller="theme"
+          data-action="theme#toggle"
+          aria-label="Toggle color theme"
+          aria-pressed="false">
+          <svg data-theme-target="sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2.2M12 19.8V22M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2 12h2.2M19.8 12H22M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"></path>
+          </svg>
+          <svg data-theme-target="moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4 hidden" aria-hidden="true">
+            <path d="M21 12.8A9 9 0 1 1 11.2 3a7.1 7.1 0 0 0 9.8 9.8z"></path>
+          </svg>
+          <span data-theme-target="label">Light</span>
+        </button>
         <div class="p-6">
           <%= yield %>
         </div>
