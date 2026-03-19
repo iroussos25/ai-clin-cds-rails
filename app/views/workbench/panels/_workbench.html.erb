@@ -3,24 +3,40 @@
   <%# Header %>
   <div class="flex items-center justify-between">
     <div>
-      <h2 class="text-2xl font-bold text-white">Analysis Workbench</h2>
-      <p class="text-gray-400 text-sm mt-1">Analyze clinical text with AI-powered contextual understanding</p>
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Analysis Workbench</h2>
+      <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Analyze clinical text with AI-powered contextual understanding</p>
     </div>
     <div class="flex items-center gap-3">
+      <button
+        type="button"
+        class="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+        data-controller="theme"
+        data-action="theme#toggle"
+        aria-label="Toggle color theme"
+        aria-pressed="false">
+        <svg data-theme-target="sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2.2M12 19.8V22M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2 12h2.2M19.8 12H22M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"></path>
+        </svg>
+        <svg data-theme-target="moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4 hidden" aria-hidden="true">
+          <path d="M21 12.8A9 9 0 1 1 11.2 3a7.1 7.1 0 0 0 9.8 9.8z"></path>
+        </svg>
+        <span data-theme-target="label">Light</span>
+      </button>
       <button data-action="click->analyze#loadDemo"
               data-analyze-target="demoBtn"
-              class="px-3 py-1.5 text-sm rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700 transition-colors">
+              class="px-3 py-1.5 text-sm rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 border border-gray-300 transition-colors dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:border-gray-700">
         Load Demo
       </button>
     </div>
   </div>
 
-  <div class="rounded-2xl border border-amber-400/40 bg-gradient-to-r from-amber-500/15 to-orange-500/10 p-4 shadow-lg shadow-amber-950/10">
+  <div class="rounded-2xl border border-amber-300 bg-gradient-to-r from-amber-100 to-orange-100 p-4 shadow-sm dark:border-amber-400/40 dark:from-amber-500/15 dark:to-orange-500/10 dark:shadow-lg dark:shadow-amber-950/10">
     <div class="flex items-start gap-3">
-      <div class="mt-0.5 rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-200">Important</div>
+      <div class="mt-0.5 rounded-full border border-amber-400/60 bg-amber-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-800 dark:border-amber-300/30 dark:bg-amber-300/10 dark:text-amber-200">Important</div>
       <div>
-        <p class="text-sm font-semibold text-amber-100">AI output is decision support only.</p>
-        <p class="mt-1 text-sm leading-relaxed text-amber-50/85">Treat every summary, differential, and recommendation in this workspace as preliminary. A licensed clinician must independently verify the source data, interpretation, and any resulting clinical action.</p>
+        <p class="text-sm font-semibold text-amber-900 dark:text-amber-100">AI output is decision support only.</p>
+        <p class="mt-1 text-sm leading-relaxed text-amber-800 dark:text-amber-50/85">Treat every summary, differential, and recommendation in this workspace as preliminary. A licensed clinician must independently verify the source data, interpretation, and any resulting clinical action.</p>
       </div>
     </div>
   </div>
