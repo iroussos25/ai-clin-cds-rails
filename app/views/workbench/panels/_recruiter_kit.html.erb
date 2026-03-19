@@ -6,9 +6,12 @@
   </script>
 
   <%# Header %>
-  <div>
-    <h2 class="text-2xl font-bold text-white">Recruiter Test Kits</h2>
-    <p class="text-gray-400 text-sm mt-1">Pre-loaded synthetic clinical scenarios for evaluation. Load any case into the Workbench, then analyze or send to Clinical Review.</p>
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <h2 class="text-2xl font-bold text-white">Recruiter Test Kits</h2>
+      <p class="text-gray-400 text-sm mt-1">Pre-loaded synthetic clinical scenarios for evaluation. Load any case into the Workbench, then analyze or send to Clinical Review.</p>
+    </div>
+    <%= render "shared/theme_toggle" %>
   </div>
 
   <div class="rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3">
