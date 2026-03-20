@@ -31,6 +31,8 @@
 /public/assets
 
 # Ignore key files for decrypting credentials and more.
+# This covers config/master.key — NEVER commit that file.
+# In production, set RAILS_MASTER_KEY as an environment variable instead.
 /config/*.key
 
 
