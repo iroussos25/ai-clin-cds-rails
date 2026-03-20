@@ -88,15 +88,19 @@
       </div>
 
       <%# Export + Sort controls %>
-      <div class="flex items-center justify-between mt-4 mb-2">
-        <div class="flex gap-2">
+      <div class="flex items-center justify-between gap-3 mt-4 mb-2 flex-wrap">
+        <div class="grid grid-cols-3 gap-2 w-full sm:w-auto sm:min-w-[24rem]">
           <button type="button" data-action="click->benchmarks#exportJson"
-                  class="px-3 py-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-400 rounded border border-gray-700 transition-colors">
+                  class="w-full px-3 py-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-400 rounded border border-gray-700 transition-colors">
             Export JSON
           </button>
           <button type="button" data-action="click->benchmarks#exportCsv"
-                  class="px-3 py-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-400 rounded border border-gray-700 transition-colors">
+                  class="w-full px-3 py-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-400 rounded border border-gray-700 transition-colors">
             Export CSV
+          </button>
+          <button type="button" data-action="click->benchmarks#exportPdf"
+                  class="w-full px-3 py-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-400 rounded border border-gray-700 transition-colors">
+            Export PDF
           </button>
         </div>
         <div class="flex items-center gap-2">

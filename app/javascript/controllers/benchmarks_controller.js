@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib"
 
 // Benchmarks controller — AI test suite + operational metrics
 export default class extends Controller {
@@ -240,40 +241,541 @@ export default class extends Controller {
   // ── Export ──
 
   exportJson() {
-    if (!this.benchmarkResults) return
-    this._download(
-      JSON.stringify(this.benchmarkResults, null, 2),
-      `benchmarks-${new Date().toISOString().slice(0, 10)}.json`,
-      "application/json"
-    )
+    this._exportBenchmarks("json")
   }
 
   exportCsv() {
+    this._exportBenchmarks("csv")
+  }
+
+  async exportPdf() {
+    await this._exportBenchmarks("pdf")
+  }
+
+  async _exportBenchmarks(format) {
     if (!this.benchmarkResults) return
+
+    const filenameBase = `benchmarks-${new Date().toISOString().slice(0, 10)}`
+
+    if (format === "json") {
+      this._downloadString(
+        JSON.stringify(this.benchmarkResults, null, 2),
+        `${filenameBase}.json`,
+        "application/json"
+      )
+      return
+    }
+
+    if (format === "csv") {
+      this._downloadString(
+        this._buildBenchmarkCsv(),
+        `${filenameBase}.csv`,
+        "text/csv"
+      )
+      return
+    }
+
+    if (format === "pdf") {
+      const pdfBytes = await this._buildBenchmarkPdf()
+      this._downloadBlob(
+        new Blob([pdfBytes], { type: "application/pdf" }),
+        `${filenameBase}.pdf`
+      )
+    }
+  }
+
+  _buildBenchmarkCsv() {
     const rows = [
       "Test Name,Model(s),Avg Latency (ms),Avg Tokens,Cost ($),Avg Citations,Consistency (%),Success Rate (%)"
     ]
-    for (const r of this.benchmarkResults.results) {
+
+    for (const result of this.benchmarkResults.results) {
       rows.push([
-        `"${r.test_name}"`,
-        `"${Object.keys(r.model_summary || {}).join("|")}"`,
-        r.avg_latency_ms,
-        r.avg_tokens,
-        r.total_cost.toFixed(6),
-        r.avg_citations,
-        r.consistency,
-        r.success_rate
+        `"${result.test_name}"`,
+        `"${Object.keys(result.model_summary || {}).join("|")}"`,
+        result.avg_latency_ms,
+        result.avg_tokens,
+        result.total_cost.toFixed(6),
+        result.avg_citations,
+        result.consistency,
+        result.success_rate
       ].join(","))
     }
-    this._download(
-      rows.join("\n"),
-      `benchmarks-${new Date().toISOString().slice(0, 10)}.csv`,
-      "text/csv"
-    )
+
+    return rows.join("\n")
   }
 
-  _download(content, filename, type) {
-    const blob = new Blob([content], { type })
+  async _buildBenchmarkPdf() {
+    const pdf = await PDFDocument.create()
+    const fonts = {
+      regular: await pdf.embedFont(StandardFonts.Helvetica),
+      bold: await pdf.embedFont(StandardFonts.HelveticaBold),
+      mono: await pdf.embedFont(StandardFonts.Courier)
+    }
+    const palette = {
+      ink: rgb(0.11, 0.14, 0.18),
+      muted: rgb(0.42, 0.46, 0.52),
+      border: rgb(0.84, 0.87, 0.9),
+      accent: rgb(0.11, 0.45, 0.82),
+      accentSoft: rgb(0.9, 0.95, 1),
+      success: rgb(0.09, 0.55, 0.3),
+      warn: rgb(0.79, 0.53, 0.11),
+      danger: rgb(0.76, 0.2, 0.24)
+    }
+    const ctx = this._createPdfContext(pdf)
+    const summary = this.benchmarkResults.summary || {}
+    const results = this._sortedResults(this.benchmarkResults.results || [])
+    const timestamp = this._pdfTimestamp()
+
+    this._drawPdfText(ctx, "Benchmark Results", {
+      x: ctx.margin,
+      y: ctx.y,
+      size: 20,
+      font: fonts.bold,
+      color: palette.ink
+    })
+    ctx.y -= 18
+
+    this._drawPdfText(ctx, "AI performance benchmark export", {
+      x: ctx.margin,
+      y: ctx.y,
+      size: 10,
+      font: fonts.regular,
+      color: palette.muted
+    })
+
+    this._drawPdfText(ctx, timestamp, {
+      x: ctx.width - ctx.margin - fonts.regular.widthOfTextAtSize(timestamp, 10),
+      y: ctx.y,
+      size: 10,
+      font: fonts.regular,
+      color: palette.muted
+    })
+    ctx.y -= 28
+
+    this._drawPdfSummary(ctx, fonts, palette, summary)
+    ctx.y -= 12
+
+    this._drawPdfSectionTitle(ctx, fonts, palette, "Results Table")
+    this._drawPdfResultsTable(ctx, fonts, palette, results)
+    ctx.y -= 8
+
+    this._drawPdfSectionTitle(ctx, fonts, palette, "Per-Test Details")
+    this._drawPdfDetails(ctx, fonts, palette, results)
+
+    return pdf.save()
+  }
+
+  _createPdfContext(pdf) {
+    const page = pdf.addPage([612, 792])
+    return {
+      pdf,
+      page,
+      width: page.getWidth(),
+      height: page.getHeight(),
+      margin: 40,
+      y: page.getHeight() - 48
+    }
+  }
+
+  _addPdfPage(ctx) {
+    ctx.page = ctx.pdf.addPage([612, 792])
+    ctx.width = ctx.page.getWidth()
+    ctx.height = ctx.page.getHeight()
+    ctx.y = ctx.height - 48
+  }
+
+  _ensurePdfSpace(ctx, minHeight) {
+    if (ctx.y - minHeight >= ctx.margin) return false
+    this._addPdfPage(ctx)
+    return true
+  }
+
+  _drawPdfSummary(ctx, fonts, palette, summary) {
+    const cards = [
+      { label: "Avg Latency", value: `${summary.avg_latency_ms || 0}ms` },
+      { label: "Total Cost", value: `$${(summary.total_cost || 0).toFixed(5)}` },
+      { label: "Avg TTFT", value: summary.avg_time_to_first_token_ms != null ? `${summary.avg_time_to_first_token_ms}ms` : "N/A" },
+      { label: "Avg Consistency", value: `${summary.avg_consistency || 0}%` },
+      { label: "Success Rate", value: `${summary.overall_success_rate || 0}%` }
+    ]
+    const gap = 12
+    const colWidth = (ctx.width - (ctx.margin * 2) - gap) / 2
+    const cardHeight = 48
+    const rows = []
+
+    for (let index = 0; index < cards.length; index += 2) {
+      rows.push(cards.slice(index, index + 2))
+    }
+
+    rows.forEach(row => {
+      this._ensurePdfSpace(ctx, cardHeight + 10)
+      const topY = ctx.y
+
+      row.forEach((card, column) => {
+        const x = ctx.margin + (column * (colWidth + gap))
+
+        ctx.page.drawRectangle({
+          x,
+          y: topY - cardHeight + 6,
+          width: colWidth,
+          height: cardHeight,
+          borderColor: palette.border,
+          borderWidth: 1,
+          color: palette.accentSoft
+        })
+        this._drawPdfText(ctx, card.label, {
+          x: x + 12,
+          y: topY - 10,
+          size: 9,
+          font: fonts.bold,
+          color: palette.muted
+        })
+        this._drawPdfText(ctx, card.value, {
+          x: x + 12,
+          y: topY - 27,
+          size: 14,
+          font: fonts.bold,
+          color: palette.ink
+        })
+      })
+
+      ctx.y = topY - cardHeight - 10
+    })
+  }
+
+  _drawPdfSectionTitle(ctx, fonts, palette, title) {
+    this._ensurePdfSpace(ctx, 24)
+    this._drawPdfText(ctx, title, {
+      x: ctx.margin,
+      y: ctx.y,
+      size: 13,
+      font: fonts.bold,
+      color: palette.accent
+    })
+    ctx.y -= 16
+    ctx.page.drawLine({
+      start: { x: ctx.margin, y: ctx.y },
+      end: { x: ctx.width - ctx.margin, y: ctx.y },
+      thickness: 1,
+      color: palette.border
+    })
+    ctx.y -= 12
+  }
+
+  _drawPdfResultsTable(ctx, fonts, palette, results) {
+    const columns = [
+      { key: "test", label: "Test", width: 182, align: "left" },
+      { key: "latency", label: "Latency", width: 56, align: "right" },
+      { key: "tokens", label: "Tokens", width: 52, align: "right" },
+      { key: "cost", label: "Cost", width: 56, align: "right" },
+      { key: "citations", label: "Citations", width: 56, align: "right" },
+      { key: "consistency", label: "Consistency", width: 72, align: "right" },
+      { key: "success", label: "Success", width: 58, align: "right" }
+    ]
+
+    const drawHeader = () => {
+      this._ensurePdfSpace(ctx, 24)
+      let cursorX = ctx.margin
+      columns.forEach(column => {
+        this._drawPdfCellText(ctx, column.label, {
+          x: cursorX,
+          y: ctx.y,
+          width: column.width,
+          align: column.align,
+          size: 8,
+          font: fonts.bold,
+          color: palette.muted
+        })
+        cursorX += column.width
+      })
+      ctx.y -= 12
+      ctx.page.drawLine({
+        start: { x: ctx.margin, y: ctx.y },
+        end: { x: ctx.width - ctx.margin, y: ctx.y },
+        thickness: 1,
+        color: palette.border
+      })
+      ctx.y -= 10
+    }
+
+    drawHeader()
+
+    results.forEach(result => {
+      const nameLines = this._wrapPdfText(result.test_name || "", 170, fonts.bold, 8)
+      const descriptionLines = this._wrapPdfText(result.description || "", 170, fonts.regular, 7)
+      const rowHeight = Math.max(18, (nameLines.length * 10) + (descriptionLines.length * 8) + 6)
+
+      if (this._ensurePdfSpace(ctx, rowHeight + 10)) {
+        drawHeader()
+      }
+
+      let cursorX = ctx.margin
+      const topY = ctx.y
+
+      let lineY = topY
+      nameLines.forEach(line => {
+        this._drawPdfText(ctx, line, {
+          x: cursorX,
+          y: lineY,
+          size: 8,
+          font: fonts.bold,
+          color: palette.ink
+        })
+        lineY -= 10
+      })
+      descriptionLines.forEach(line => {
+        this._drawPdfText(ctx, line, {
+          x: cursorX,
+          y: lineY,
+          size: 7,
+          font: fonts.regular,
+          color: palette.muted
+        })
+        lineY -= 8
+      })
+      cursorX += columns[0].width
+
+      const cells = [
+        `${result.avg_latency_ms}ms`,
+        `${result.avg_tokens}`,
+        `$${result.total_cost.toFixed(5)}`,
+        `${result.avg_citations}`,
+        `${result.consistency}%`,
+        `${result.success_rate}%`
+      ]
+
+      cells.forEach((value, index) => {
+        const column = columns[index + 1]
+        this._drawPdfCellText(ctx, value, {
+          x: cursorX,
+          y: topY,
+          width: column.width,
+          align: column.align,
+          size: 8,
+          font: index === 1 ? fonts.mono : fonts.regular,
+          color: palette.ink
+        })
+        cursorX += column.width
+      })
+
+      ctx.page.drawLine({
+        start: { x: ctx.margin, y: topY - rowHeight + 4 },
+        end: { x: ctx.width - ctx.margin, y: topY - rowHeight + 4 },
+        thickness: 0.75,
+        color: palette.border
+      })
+      ctx.y = topY - rowHeight
+    })
+  }
+
+  _drawPdfDetails(ctx, fonts, palette, results) {
+    results.forEach(result => {
+      this._ensurePdfSpace(ctx, 72)
+
+      this._drawPdfText(ctx, result.test_name || "Untitled Test", {
+        x: ctx.margin,
+        y: ctx.y,
+        size: 12,
+        font: fonts.bold,
+        color: palette.ink
+      })
+      ctx.y -= 14
+
+      const descriptionLines = this._wrapPdfText(result.description || "", ctx.width - (ctx.margin * 2), fonts.regular, 9)
+      descriptionLines.forEach(line => {
+        this._drawPdfText(ctx, line, {
+          x: ctx.margin,
+          y: ctx.y,
+          size: 9,
+          font: fonts.regular,
+          color: palette.muted
+        })
+        ctx.y -= 11
+      })
+
+      const statLine = `Avg latency ${result.avg_latency_ms}ms   Cost $${result.total_cost.toFixed(5)}   Consistency ${result.consistency}%   Success ${result.success_rate}%`
+      this._drawPdfText(ctx, statLine, {
+        x: ctx.margin,
+        y: ctx.y,
+        size: 8,
+        font: fonts.mono,
+        color: palette.ink
+      })
+      ctx.y -= 16
+
+      if (Object.keys(result.model_summary || {}).length > 0) {
+        this._drawPdfText(ctx, "Model Breakdown", {
+          x: ctx.margin,
+          y: ctx.y,
+          size: 9,
+          font: fonts.bold,
+          color: palette.accent
+        })
+        ctx.y -= 12
+
+        Object.entries(result.model_summary || {}).forEach(([model, stats]) => {
+          this._ensurePdfSpace(ctx, 12)
+          const modelLine = `${model}  |  ${stats.count} calls  |  ${stats.avg_latency_ms}ms avg  |  ${stats.success_rate}% success`
+          this._drawPdfText(ctx, modelLine, {
+            x: ctx.margin + 8,
+            y: ctx.y,
+            size: 8,
+            font: fonts.mono,
+            color: palette.ink
+          })
+          ctx.y -= 11
+        })
+      }
+
+      ctx.y -= 2
+      this._drawPdfText(ctx, "Individual Runs", {
+        x: ctx.margin,
+        y: ctx.y,
+        size: 9,
+        font: fonts.bold,
+        color: palette.accent
+      })
+      ctx.y -= 12
+      this._drawPdfRunHeader(ctx, fonts, palette)
+
+      result.runs.forEach(run => {
+        const extraLines = run.error
+          ? this._wrapPdfText(`Error: ${run.error}`, 440, fonts.regular, 7)
+          : []
+        const rowHeight = 12 + (extraLines.length * 8)
+        if (this._ensurePdfSpace(ctx, rowHeight + 8)) {
+          this._drawPdfRunHeader(ctx, fonts, palette)
+        }
+
+        const topY = ctx.y
+        const cells = [
+          `#${run.run}`,
+          run.model || "unknown",
+          `${run.latency_ms}ms`,
+          `${run.total_tokens}`,
+          run.success ? "Success" : "Failed"
+        ]
+        const columns = [50, 200, 70, 70, 70]
+        let cursorX = ctx.margin
+
+        cells.forEach((value, index) => {
+          this._drawPdfCellText(ctx, value, {
+            x: cursorX,
+            y: topY,
+            width: columns[index],
+            align: index >= 2 ? "right" : "left",
+            size: 8,
+            font: index === 1 ? fonts.mono : fonts.regular,
+            color: index === 4
+              ? (run.success ? palette.success : palette.danger)
+              : palette.ink
+          })
+          cursorX += columns[index]
+        })
+
+        let errorY = topY - 10
+        extraLines.forEach(line => {
+          this._drawPdfText(ctx, line, {
+            x: ctx.margin + 8,
+            y: errorY,
+            size: 7,
+            font: fonts.regular,
+            color: palette.danger
+          })
+          errorY -= 8
+        })
+
+        ctx.page.drawLine({
+          start: { x: ctx.margin, y: topY - rowHeight + 2 },
+          end: { x: ctx.width - ctx.margin, y: topY - rowHeight + 2 },
+          thickness: 0.75,
+          color: palette.border
+        })
+        ctx.y = topY - rowHeight
+      })
+
+      ctx.y -= 14
+    })
+  }
+
+  _drawPdfRunHeader(ctx, fonts, palette) {
+    const columns = [
+      { label: "Run", width: 50, align: "left" },
+      { label: "Model", width: 200, align: "left" },
+      { label: "Latency", width: 70, align: "right" },
+      { label: "Tokens", width: 70, align: "right" },
+      { label: "Status", width: 70, align: "right" }
+    ]
+
+    let cursorX = ctx.margin
+    columns.forEach(column => {
+      this._drawPdfCellText(ctx, column.label, {
+        x: cursorX,
+        y: ctx.y,
+        width: column.width,
+        align: column.align,
+        size: 8,
+        font: fonts.bold,
+        color: palette.muted
+      })
+      cursorX += column.width
+    })
+    ctx.y -= 11
+    ctx.page.drawLine({
+      start: { x: ctx.margin, y: ctx.y },
+      end: { x: ctx.width - ctx.margin, y: ctx.y },
+      thickness: 1,
+      color: palette.border
+    })
+    ctx.y -= 10
+  }
+
+  _drawPdfCellText(ctx, text, { x, y, width, align = "left", size, font, color }) {
+    const content = `${text ?? ""}`
+    const textWidth = font.widthOfTextAtSize(content, size)
+    const drawX = align === "right"
+      ? x + width - textWidth
+      : x
+
+    this._drawPdfText(ctx, content, { x: drawX, y, size, font, color })
+  }
+
+  _drawPdfText(ctx, text, { x, y, size, font, color }) {
+    ctx.page.drawText(`${text ?? ""}`, { x, y, size, font, color })
+  }
+
+  _wrapPdfText(text, maxWidth, font, size) {
+    if (!text) return []
+
+    const words = `${text}`.split(/\s+/)
+    const lines = []
+    let current = ""
+
+    words.forEach(word => {
+      const candidate = current ? `${current} ${word}` : word
+      if (font.widthOfTextAtSize(candidate, size) <= maxWidth) {
+        current = candidate
+        return
+      }
+
+      if (current) lines.push(current)
+      current = word
+    })
+
+    if (current) lines.push(current)
+    return lines
+  }
+
+  _pdfTimestamp() {
+    return `Generated ${new Date().toLocaleString()}`
+  }
+
+  _downloadString(content, filename, type) {
+    this._downloadBlob(new Blob([content], { type }), filename)
+  }
+
+  _downloadBlob(blob, filename) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
