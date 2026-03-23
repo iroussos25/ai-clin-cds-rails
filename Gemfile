@@ -26,7 +26,7 @@ gem "rack-attack", "~> 6.7"
 # PDF text extraction
 gem "pdf-reader", "~> 2.12"
 # HTTP client for external API calls (Google Gemini, PubMed, FHIR)
-gem "httpx", "~> 1.3"
+gem "httpx", "~> 1.7"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # gem "bcrypt", "~> 3.1.7"
